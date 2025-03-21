@@ -58,6 +58,22 @@ function dclickCenter(x,y,w,h){
     click(x+(w/2),y+(h/2))
     sleep(100) 
 }
+let dp={
+    x:undefined,
+    y:undefined,
+}
+let lp={
+    x:undefined,
+    y:undefined,
+}
+let rp={
+    x:undefined,
+    y:undefined,
+}
+let up={
+    x:undefined,
+    y:undefined,
+}
 function catchDownPoint(x,y,w,h){  
     dp.x=x+(w/2)
     dp.y=y+(h/2)
@@ -101,23 +117,7 @@ function startJs() {
 }
 let pg_1="com.android.permissioncontroller:id/permission_allow_button"
 let pg_2="com.android.packageinstaller:id/permission_allow_button"
-let c_1="XXX自定义"
-let dp={
-    x:undefined,
-    y:undefined,
-}
-let lp={
-    x:undefined,
-    y:undefined,
-}
-let rp={
-    x:undefined,
-    y:undefined,
-}
-let up={
-    x:undefined,
-    y:undefined,
-}
+let c_1="XXX自定义" 
 //竖版
 let TAP={x:device.width/2,y: device.height/ 2}
 //横板

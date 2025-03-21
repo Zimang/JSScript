@@ -1,17 +1,17 @@
-PROJECT_NAME="com_beat_fight_fnf_mobile_original_friday_night_funkin_game_android"  # 定义项目名称变量
-PRODUCTION_NAME="com.beat.fight.fnf.mobile.original.friday.night.funkin.game.android"  # 定义项目名称变量
+PROJECT_NAME="com_dbffreebie_webview"  # 定义项目名称变量
+PRODUCTION_NAME="com.dbffreebie.webview"  # 定义项目名称变量
 # PROJECT_NAME="bloodsugar_diabetes_pressuretraker"  # 定义项目名称变量
 mkdir -p "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/assests"
 SCREENSHOOTS_SRC="D:\monitor\assests"
 
  # # # 创建项目 temp
 # # 默认配置区域（可在此修改或添加路径）
-# DEFAULT_SRC="D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/temp_demo.js"
-# DEFAULT_DESTS=(
-#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/temp_demo.js"
-#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/temp_demo.js"
-#    # 添加新路径直接换行写在这里
-# )
+DEFAULT_SRC="D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/temp_demo.js"
+DEFAULT_DESTS=(
+   "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/temp_demo.js"
+   "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/temp_demo.js"
+   # 添加新路径直接换行写在这里
+)
 
 # # 创建项目 customUtils
 # # 默认配置区域（可在此修改或添加路径）
@@ -41,11 +41,11 @@ SCREENSHOOTS_SRC="D:\monitor\assests"
 # 同步图片项目文件夹  蓝叠
 # customUtils,Utils  temp不用变
 # 1. 把截图文件复制到项目资源文件夹 
-DEFAULT_SRC="${SCREENSHOOTS_SRC}"
-DEFAULT_DESTS=(
-   "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
-   # 添加新路径直接换行写在这里
-)
+# DEFAULT_SRC="${SCREENSHOOTS_SRC}"
+# DEFAULT_DESTS=(
+#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
+#    # 添加新路径直接换行写在这里
+# )
 
  
 
@@ -124,10 +124,9 @@ done
 
 echo "操作完成"
 
-
+adb shell am force-stop "${PRODUCTION_NAME}.autojs"
 # 传递到模拟器项目文件夹 蓝叠
 adb push "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}" "//storage/emulated/0/脚本/${PROJECT_NAME}/"
 adb pull "//storage/emulated/0/脚本/${PROJECT_NAME}/${PROJECT_NAME}/${PRODUCTION_NAME}.autojs_v1.0.0.apk" "D:/workplace/autojs_result/${PRODUCTION_NAME}.autojs_v1.0.0.apk"
-adb shell am force-stop "${PRODUCTION_NAME}.autojs"
 # 如果不清除，会嵌套打包，原先的包会成为资源文件
 adb shell rm "//storage/emulated/0/脚本/${PROJECT_NAME}/${PROJECT_NAME}/${PRODUCTION_NAME}.autojs_v1.0.0.apk" 
