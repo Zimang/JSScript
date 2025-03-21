@@ -1,0 +1,14 @@
+{
+    "globalPatterns": [
+        "ad_iframe", 
+        "adInfoIcon", 
+        "mbridge_reward_end_card_more_offer_rl", 
+        "mbridge_more_offer_ll_item", 
+        "mbridge_reward_end_card_like_tv", 
+        "mbridge_moreoffer_hls", 
+        "advertisement-card-wrapper"],
+    "packageSpecific": {
+        "应用包名1": ["专用广告ID1"],
+        "应用包名2": ["专用广告ID2"]
+    }
+}
