@@ -92,7 +92,7 @@ function main(){
             break;
         }
         
-        for(i=0;i<300;i++){
+        for(i=0;i<300;i++){ 
             [point1, point2] = generator();
         
             // console.log('Point1:',point1,' Point2:', point2); // 示例输出：{x: 123, y: 456}

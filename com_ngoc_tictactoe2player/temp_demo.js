@@ -7,6 +7,7 @@ let Thread = threads.start(function () {
         }
     }
 });
+
 //mode
 // 1.直连模拟器调试模式
 // 2.打包进入apk,auto.js点击执行模式,相对路径
@@ -15,9 +16,9 @@ let Thread = threads.start(function () {
 // 5.直连模拟器调试模式,绝对路径，Pictures文件夹
 // 6.直连模拟器调试模式,绝对路径，Pictures文件夹  v6
 var mode=1;
-let proj="com_dbffreebie_webview"
-let projP="com.dbffreebie.webview.autojs"
-let projR="com.dbffreebie.webview"
+let proj="com_ngoc_tictactoe2player"
+let projP="com.ngoc.tictactoe2player.autojs"
+let projR="com.ngoc.tictactoe2player"
 function getPath(p){
     switch(mode){
         case 5:
@@ -57,6 +58,14 @@ function dclickCenter(x,y,w,h){
     click(x+(w/2),y+(h/2))
     sleep(100) 
 }
+function ddclickCenter(centerX,centerY,w,h){
+    click(centerX,centerY)
+    sleep(100) 
+}
+function digUp(x,y,w,h){
+    click(x+(w/2),y+(h/2))
+    sleep(100) 
+}
 function no_action(x,y,w,h){
  
 }
@@ -69,16 +78,16 @@ function no_action(x,y,w,h){
 
 // // //临时脚本配置 蓝叠
 // var Utils=require(getPathWithNum("utils",6))
-var zutils=require(getPathWithNum("customUtils",7))
-// var zutils=require("./customUtils") 引索
-// var utils = new Utils()
-mode=8
+// var zutils=require(getPathWithNum("customUtils",7))
+// // var zutils=require("./customUtils") 
+// // var utils = new Utils()
+// mode=8
 
 // 打包脚本配置
-// var Utils=require(getPathWithNum("utils",3))
-// var zutils=require(getPathWithNum("customUtils",3))
-// var utils = new Utils()
-// mode=2
+var Utils=require(getPathWithNum("utils",3))
+var zutils=require(getPathWithNum("customUtils",3))
+var utils = new Utils()
+mode=2
 
 function endJs() {
     files.createWithDirs("/sdcard/mock/autojsend");
@@ -89,22 +98,36 @@ function startJs() {
 }
 let pg_1="com.android.permissioncontroller:id/permission_allow_button"
 let pg_2="com.android.packageinstaller:id/permission_allow_button"
-let c_1="com.dbffreebie.webview:id/grantBtn"
-let c_2="com.dbffreebie.webview:id/grantBtn"
+let c_1="XXX自定义"
 //竖版
 let TAP={x:device.width/2,y: device.height/ 2}
 //横板
 // let TAP={y:device.width/2,x: device.height/ 2}
-let cachedBT_1={
-    x:undefined,
-    y:undefined,
-}
-function catchPoint_1(x,y,w,h){  
-    cachedBT_1.x=x+(w/2)
-    cachedBT_1.y=y+(h/2)
-    sleep(100) 
-}
 
+let pannelTopLeft=new zutils.CachedBT(
+    "cut_3_1.png",getPath("")
+) 
+let pannelButtomRight=new zutils.CachedBT(
+    "cut_3_4.png",getPath("")
+)
+let playingSign=new zutils.CachedBT(
+    "cut_2_.png",getPath("")
+)
+let popButtom=new zutils.CachedBT(
+    "cut_1_1.png",getPath(""),0,0
+)
+let homeButtom=new zutils.CachedBT(
+    "cut_2_2.png",getPath("")
+)
+let replayButtom=new zutils.CachedBT(
+    "cut_2_3.png",getPath("")
+)
+let snookButtom=new zutils.CachedBT(
+    "cut_5_1.png",getPath("")
+)
+
+  
+var twoPG=undefined
 var isGuid=true
 function grant(){
     // zutils.ids([
@@ -114,6 +137,8 @@ function grant(){
 }
 function guid(){
     grant()
+    snookButtom.existApply(ddclickCenter)
+    replayButtom.existApply(ddclickCenter)
 }
 function shift(){ 
     // swipe(TAP.x,TAP.y,TAP.x,TAP.y-400,200) 
@@ -163,7 +188,14 @@ function logic3() {
 
 //对于游戏我们只需要找到一个死循环即可
 function singleLoop(){
-
+    var add=0
+    while(!replayButtom.locate()){
+        add++
+        snookAction()
+        if(add==15){
+            return true
+        }
+    } 
 }
 
 const logics = [logic1, logic2, logic3]
@@ -174,30 +206,58 @@ function loopPlay(){
     for(var i=0;i<3;i++){  //1:3不快不慢
         randomLogic()()
     } 
+} 
+
+function snookAction(){
+    // if(popButtom.locate(800)){
+        if(!pannelButtomRight.check()||!pannelTopLeft.check()){
+            pannelButtomRight.locate()
+            pannelTopLeft.locate()
+        }
+
+        if(pannelButtomRight.check()&&pannelTopLeft.check()){
+                if(twoPG==undefined){
+                    clog("没有找到pp")
+                    clog(twoPG)
+                    twoPG= zutils.create2PointGenerator(
+                        pannelButtomRight.x-pannelTopLeft.x,
+                        pannelButtomRight.y-pannelTopLeft.y, 
+                        200,
+                        pannelTopLeft.x,pannelTopLeft.y);
+                    clog(twoPG)
+                }else{
+        
+                    popButtom.existApply((cx,cy,w,h)=>{ 
+                        let pps=twoPG()  
+                        gesture(1000,[pps[0].x, pps[0].y],[pps[1].x, pps[1].y])   
+                        sleep(100)
+                        ddclickCenter(cx,cy,w,h)
+                    })
+
+                }
+        // }
+        }
+    // }
+
 }
 
-
 function singleTest(){
-    app.launch(projR) 
+    // app.launch(projR) 
     //广告
     //afollow的用法
     // zutils.afollow([
-    //     // ["t","Continue",0],  
-    //     ["i",pg_1,0,1500],
+    //     ["t","Continue",0],  
+    //     ["i","com.mbit.callerid.dailer.spamcallblocker:id/btnContinue",0,1500],
     //     ["i","com.mbit.callerid.dailer.spamcallblocker:id/btnAllowSync",0,1500],
     //     ["t","Next",1000,1000],  
     // ])
 
+    while(!replayButtom.locate()){
+        snookAction()
+    }
 
-    //follow的用法
-    // zutils.follow([
-    //     // ["cut_1_1.png",500],
-    //     ()=>{
-    //         clog("hha")
-    //         return true;
-    //     },
-    // ],getPath(""),dclickCenter)
-
+    // zutils.repeatFunction(snookAction,200)
+    //follow的用法 
     // zutils.clickFromPath([0, 1, 0, 0, 0, 0, 0, 1, 1])
     // guid()
     // logic1()
@@ -211,23 +271,24 @@ if (!requestScreenCapture(false)) {
 function main(){
     console.log("start")
     
-    singleTest()
+    // singleTest()
     
     // 记得打包要切换路径
     // 记得很横板要切换截图模式
     // // warmup play
-    // app.launch(projR)
-    // sleep(5000)
+    app.launch(projR)
+    sleep(12000)
 
-    // const endTimeMillis = Date.now() + getRandomInt(4 * 60 * 1000, 6 * 60 * 1000);
-    // const intervalRange = { min: 1000, max: 3000 };
-    // // 循环执行，直到当前时间超过结束时间
-    // while (Date.now() < endTimeMillis) { 
-    //     guid()
-    //     loopPlay()
-    //     const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
-    //     sleep(sleepTime);
-    // } 
+    const endTimeMillis = Date.now() + getRandomInt(4 * 60 * 1000, 6 * 60 * 1000);
+    const intervalRange = { min: 1000, max: 3000 };
+    // 循环执行，直到当前时间超过结束时间
+    while (Date.now() < endTimeMillis) { 
+        guid()
+        // loopPlay()
+        singleLoop()
+        const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
+        sleep(sleepTime);
+    } 
     console.log("edn")
 }
 runtime.getImages().initOpenCvIfNeeded();

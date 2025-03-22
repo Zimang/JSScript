@@ -1026,155 +1026,6 @@ function landScapeCentralClick(delay) {
     sleep(delay)
 }
 
-function no_action(x,y,w,h){
- 
-}
-// /**
-//  * img 图片资源
-//  * delay 查找图片后的延时
-//  * actionDelay 操作后的延时
-//  */
-// class CachedBT {
-//     constructor(img,prefix,delay=500,actionDelay=100) {
-//       this.x = undefined;  // 坐标x
-//       this.y = undefined;  // 坐标y
-//       this.w = undefined;  // 坐标y
-//       this.h = undefined;  // 坐标y
-//       this.img =img ;  // 图片
-//       this.prefix =prefix ;  // 图片
-//       this.delay =delay ;  // 图片
-//       this.actionDelay =actionDelay ;  // 图片
-//     }
-  
-//     // 点击方法
-//     click() {
-//       if (this.x && this.y) {
-//         click(this.x, this.y);
-//       }
-//     }
-  
-//     // 搜图然后初始化
-//     existCheck() {
-//       return follow(
-//         [[this.img, this.delay]],
-//         this.prefix,
-//         no_action // 绑定this以确保回调中能访问实例
-//       )
-//     }  
-//     // 搜图然后初始化
-//     /**
-//      * 
-//      * @param {*} fn centerX, centerY, w, h 
-//      * @returns 
-//      */
-//     existApply(fn) {
-//       if(follow(
-//         [[this.img, this.delay]],
-//         this.prefix,
-//         this.catchPoint.bind(this) // 绑定this以确保回调中能访问实例
-//       )){
-//         fn(this.x,this.y,this.w,this.h)
-//       }else{
-//         clog("没有找到图片:"+this.img)
-//       }
-//     }
-
-//     locate(){
-//         return follow(
-//             [[this.img, this.delay]],
-//             this.prefix,
-//             this.catchPoint.bind(this)  // 绑定this以确保回调中能访问实例
-//           )
-//     }
-  
-//     // 是否cache
-//     check() {
-//       if (this.x&&this.y) {
-//         return true; //找到了
-//       } else {
-//         return false; //没有找到
-//       }
-//     }
-  
-//     // 坐标捕获方法
-//     //必须要求
-//     catchPoint(x, y, w, h) {
-//       this.x = x + w / 2;  // 计算中心点x
-//       this.y = y + h / 2;  // 计算中心点y
-//       this.w=w;
-//       this.h=h;
-//       clog(this);          // 日志输出当前实例
-//       sleep(this.actionDelay);
-//     }
-// }
-
-// 使用构造函数替代 class
-function CachedBT(img, prefix, delay, actionDelay) {
-    // 默认参数处理（ES5 无默认参数语法）
-    delay = typeof delay !== 'undefined' ? delay : 500;
-    actionDelay = typeof actionDelay !== 'undefined' ? actionDelay : 100;
-  
-    // 初始化属性
-    this.x = undefined;
-    this.y = undefined;
-    this.w = undefined;
-    this.h = undefined;
-    this.img = img;
-    this.prefix = prefix;
-    this.delay = delay;
-    this.actionDelay = actionDelay;
-  }
-
-// 方法定义在原型链上
-CachedBT.prototype.click = function() {
-    if (this.x && this.y) {
-        click(this.x, this.y);
-    }
-};
-
-CachedBT.prototype.existCheck = function() {
-    return follow(
-        [[this.img, this.delay]],
-        this.prefix,
-        no_action
-    );
-};
-
-CachedBT.prototype.existApply = function(fn) {
-    var result = follow(
-        [[this.img, this.delay]],
-        this.prefix,
-        this.catchPoint.bind(this) // 保持 this 指向
-    );
-    if (result) {
-        fn(this.x, this.y, this.w, this.h);
-    } else {
-        clog("没有找到图片:" + this.img); // 模板字符串改为拼接
-    }
-};
-
-CachedBT.prototype.locate = function(pre) {
-    if(pre==undefined) pre=500 
-    return follow(
-        [[this.img, this.delay,pre]],
-        this.prefix,
-        this.catchPoint.bind(this)
-    );
-};
-
-CachedBT.prototype.check = function() {
-    return !!this.x && !!this.y;
-};
-
-CachedBT.prototype.catchPoint = function(x, y, w, h) {
-    this.x = x + w / 2;
-    this.y = y + h / 2;
-    this.w = w;
-    this.h = h;
-    clog(this);
-    sleep(this.actionDelay);
-};
-
 //wait2do 
 //等到某个事件出现（图片，组件），然后去做某件事情
 //找到的ponit(一个)和args作为参数提供给callback
@@ -1550,8 +1401,6 @@ function detectAndClickControlsByRoundsWith(round, fn) {
 }
 
 
-
-
 //初始化 检查分辨率，检查初始
 
 /** 日期 */
@@ -1572,15 +1421,6 @@ function formatDate(now) {
     return res;
 }
 
-/**
- * 方法生成器，方法可以给出随机的水平或者垂直的两点
- * @param {*} rectWidth  范围内的宽
- * @param {*} rectHeight  范围内的高
- * @param {*} distance  两点距离
- * @param {*} addX  start
- * @param {*} addY  top
- * @returns 
- */
 function create2PointGenerator(rectWidth, rectHeight, distance, addX, addY) {
     if (!addX) addX = 0
     if (!addY) addY = 0
@@ -2413,6 +2253,5 @@ module.exports = {
     locatSPE, //使用属性的定位器
     canCanNeed, //安全调用
     canCanNeedOne, //安全调用
-    CachedBT, //缓存类
     create2PointGenerator
 };

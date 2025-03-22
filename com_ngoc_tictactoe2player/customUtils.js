@@ -114,6 +114,9 @@ function Match(point, similarity, scaleX, scaleY) {
     this.scaleY = scaleY;
 }
 
+var isCacheDPI=false
+var cacheDPI=undefined
+
 /**
  * 找图，在图中找出所有匹配的位置
  * @param {Image} img
@@ -150,6 +153,7 @@ function matchTemplate(img, template, options) {
     // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
     // =================================================
     let finalMatches = [];
+    // if(isCacheDPI)
     for (let factor of options.scaleFactors) {
         let [fx, fy] = factor;
         let resizedTemplate = new Mat();
@@ -179,6 +183,7 @@ function matchTemplate(img, template, options) {
                 finalMatches = currentMatches.slice(0, options.max);
                 break;
             }
+            cacheDPI=factor
             if (!isOverlapping(finalMatches, match)) {
                 finalMatches.push(match);
             }
@@ -192,6 +197,89 @@ function matchTemplate(img, template, options) {
             break;
         }
     }
+    largeMat !== img.mat && largeMat.release();
+    largeGrayMat && largeGrayMat.release();
+    templateGrayMat && templateGrayMat.release();
+
+    return finalMatches;
+}
+
+/**
+ * 找图，在图中找出所有匹配的位置
+ * @param {Image} img
+ * @param {Image} template
+ * @param {MatchOptions} options 参数见上方定义
+ * @returns {Match[]}
+ */
+function cachedMatchTemplate(img, template, options) {
+    // console.log(Imgproc.resize.toString())
+    if (img == null || template == null) {
+        throw new Error('ParamError img null:' + img == null + " temp == null:" + template == null);
+    }
+    options = MatchOptions.check(options);
+    // console.log('参数：', options);
+
+    let largeMat = img.mat;
+    let templateMat = template.mat;
+
+    // console.log("temp ", templateMat," lar ",largeMat);
+    let largeGrayMat;
+    let templateGrayMat;
+    if (options.region) {
+        options.region = buildRegion(options.region, img);
+        largeMat = new Mat(largeMat, options.region);
+    }
+    // 灰度处理
+    if (options.grayTransform) {
+        largeGrayMat = new Mat();
+        Imgproc.cvtColor(largeMat, largeGrayMat, Imgproc.COLOR_BGR2GRAY);
+        templateGrayMat = new Mat();
+        Imgproc.cvtColor(templateMat, templateGrayMat, Imgproc.COLOR_BGR2GRAY);
+    }
+
+    // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
+    // =================================================
+    let finalMatches = [];
+    if(isCacheDPI&&cacheDPI!=undefined){
+
+        let factor =cacheDPI
+        let [fx, fy] = factor;
+        let resizedTemplate = new Mat();
+        // console.log("templateGrayMat || templateMat ",templateGrayMat || templateMat);
+
+        Imgproc.resize(templateGrayMat || templateMat, resizedTemplate, new Size(), fx, fy, Imgproc.INTER_LINEAR);
+        // 执行模板匹配，标准化相关性系数匹配法
+        let matchMat = new Mat();
+        //
+        //    console.log('新的temp 长宽 '+resizedTemplate.size().height+" "+resizedTemplate.size().width);
+        //    console.log('新的imag 长宽 '+largeMat.size().height+" "+largeMat.size().width);
+        // 检查 resizedTemplate 的尺寸是否超过 largeMat 的尺寸
+        // 放缩因子可能会导致在蚂蚁窝找大象的问题        
+        if (resizedTemplate.size().height > largeMat.size().height ||
+            resizedTemplate.size().width > largeMat.size().width) {
+            console.log('放缩后存在冲突');
+            resizedTemplate.release(); 
+        } else{
+            Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
+            let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
+            //  console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+            for (let match of currentMatches) {
+                if (finalMatches.length === 0) {
+                    finalMatches = currentMatches.slice(0, options.max);
+                    break;
+                }
+                if (!isOverlapping(finalMatches, match)) {
+                    finalMatches.push(match);
+                }
+                if (finalMatches.length >= options.max) {
+                    break;
+                }
+            }
+            resizedTemplate.release();
+            matchMat.release();  
+        }
+    } 
+
     largeMat !== img.mat && largeMat.release();
     largeGrayMat && largeGrayMat.release();
     templateGrayMat && templateGrayMat.release();
@@ -303,13 +391,24 @@ function clickTargetPicCentral(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -432,13 +531,24 @@ function findSinglePicTo(fn, tar, delay, source) {
     //    console.log("zim"+source.width)
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -468,13 +578,24 @@ function findSingleColorfulPicTo(fn, tar, delay, source) {
     //    console.log("zim"+source.width)
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -500,13 +621,24 @@ function findSinglePicFromPathTo(fn, tarp, delay, source) {
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
