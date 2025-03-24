@@ -117,6 +117,17 @@ function Match(point, similarity, scaleX, scaleY) {
 var isCacheDPI=false
 var cacheDPI=undefined
 
+function getCachedInfo(){
+    return {
+        isCached:isCacheDPI,
+        cacheDPI:cacheDPI,
+    }
+}
+
+function enableDPICache(toCache){
+    isCacheDPI=toCache
+}
+
 /**
  * 找图，在图中找出所有匹配的位置
  * @param {Image} img
@@ -177,7 +188,7 @@ function matchTemplate(img, template, options) {
 
         Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
         let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
-        //  console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+         console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
         for (let match of currentMatches) {
             if (finalMatches.length === 0) {
                 finalMatches = currentMatches.slice(0, options.max);
@@ -262,7 +273,7 @@ function cachedMatchTemplate(img, template, options) {
         } else{
             Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
             let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
-            //  console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+             console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
             for (let match of currentMatches) {
                 if (finalMatches.length === 0) {
                     finalMatches = currentMatches.slice(0, options.max);
@@ -578,7 +589,6 @@ function findSingleColorfulPicTo(fn, tar, delay, source) {
     //    console.log("zim"+source.width)
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
-    var res
     if(isCacheDPI){
         res = cachedMatchTemplate(source, tar, {
             threshold: 0.85,
@@ -621,7 +631,6 @@ function findSinglePicFromPathTo(fn, tarp, delay, source) {
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res
     if(isCacheDPI){
         res = cachedMatchTemplate(source, tar, {
             threshold: 0.85,
@@ -669,13 +678,23 @@ function findSingleColorfulPicFromPathTo(fn, tarp, delay, source) {
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -704,13 +723,23 @@ function clickTargetPicCentralFromPath(tarp, delay, source) {
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -749,13 +778,23 @@ function clickColorfulTargetPicCentralFromPath(tarp, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     var tar = images.read(tarp);
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -785,13 +824,23 @@ function clickColorfulTargetPicLeftTop(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -826,13 +875,23 @@ function clickColorfulTargetPicLeftTopFromPath(tarp, delay, source) {
         images.saveImage(img, "/sdcard/1.jpg", "jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -862,13 +921,23 @@ function clickTargetPicLeftTop(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -932,13 +1001,23 @@ function clickTargetPicLeftTopFromPath(tarp, delay, source) {
     }
     var tar = images.read(tarp);
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -972,14 +1051,23 @@ function swipeTargetPicLeft(tar, delay, dur, source) {
         dur = 200
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: 1
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         let match = res[0];
         let match_x = match.point.x + tar.width * match.scaleX * 0.5
@@ -1012,14 +1100,23 @@ function swipeTargetPicLeftFromPath(tarp, delay, dur, source) {
         dur = 200
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: 1
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         let match = res[0];
         let match_x = match.point.x + tar.width * match.scaleX * 0.5
@@ -1052,14 +1149,23 @@ function clickAllPicsCentral(tar, delay, picNum, intervalT, source) {
         intervalT = 20
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: picNum
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         for (let match of res) {
             var x = Number(match.point.x) + Number(tar.width) * Number(match.scaleX) * 0.5;
@@ -1093,14 +1199,23 @@ function clickAllPicsCentralFromPath(tarp, delay, picNum, intervalT, source) {
         intervalT = 20
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: picNum
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         for (let match of res) {
             var x = Number(match.point.x) + Number(tar.width) * Number(match.scaleX) * 0.5;
@@ -2546,5 +2661,8 @@ module.exports = {
     canCanNeed, //安全调用
     canCanNeedOne, //安全调用
     CachedBT, //缓存类
+    getCachedInfo, //获取缓存信息
+    enableDPICache, //使能缓存
     create2PointGenerator
 };
+ 

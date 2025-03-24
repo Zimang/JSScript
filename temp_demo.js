@@ -57,9 +57,16 @@ function dclickCenter(x,y,w,h){
     click(x+(w/2),y+(h/2))
     sleep(100) 
 }
+function ddclickCenter(centerX,centerY,w,h){
+    click(centerX,centerY)
+    sleep(100) 
+}
+ 
 function no_action(x,y,w,h){
  
 }
+
+
 // // //临时脚本配置 雷电
 // // var Utils=require(getPathWithNum("utils",6))
 // var zutils=require(getPathWithNum("customUtils",5))
@@ -94,15 +101,13 @@ let c_1="XXX自定义"
 let TAP={x:device.width/2,y: device.height/ 2}
 //横板
 // let TAP={y:device.width/2,x: device.height/ 2}
-let cachedBT_1={
-    x:undefined,
-    y:undefined,
-}
-function catchPoint_1(x,y,w,h){  
-    cachedBT_1.x=x+(w/2)
-    cachedBT_1.y=y+(h/2)
-    sleep(100) 
-}
+// let bt_1=new zutils.CachedBT(
+//     "cut_1_1.png",getPath("")
+// ) 
+
+let test=new zutils.CachedBT(
+    "cut_1_1.png",getPath(""),"buttom 1"
+) 
 
 var isGuid=true
 function grant(){
@@ -196,12 +201,17 @@ function singleTest(){
     //     },
     // ],getPath(""),dclickCenter)
 
+    // if(!levelButtom.existApply(no_action,false)){
+    //     zutils.enableDPICache(false)
+    // }
+
     // zutils.clickFromPath([0, 1, 0, 0, 0, 0, 0, 1, 1])
     // guid()
     // logic1()
     // logic2()
     // logic3() 
 }
+
 if (!requestScreenCapture(false)) {
     toast("请求截图失败");
     exit();
@@ -223,6 +233,7 @@ function main(){
     // while (Date.now() < endTimeMillis) { 
     //     guid()
     //     loopPlay()
+    //     singleLoop()
     //     const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
     //     sleep(sleepTime);
     // } 

@@ -1,5 +1,5 @@
-PROJECT_NAME="com_ngoc_tictactoe2player"  # 定义项目名称变量
-PRODUCTION_NAME="com.ngoc.tictactoe2player"  # 定义项目名称变量
+PROJECT_NAME="com_superminds_goods_sorting_triple_match3d"  # 定义项目名称变量
+PRODUCTION_NAME="com.superminds.goods.sorting.triple.match3d"  # 定义项目名称变量
 # PROJECT_NAME="bloodsugar_diabetes_pressuretraker"  # 定义项目名称变量
 mkdir -p "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/assests"
 SCREENSHOOTS_SRC="D:\monitor\assests"
@@ -41,11 +41,11 @@ SCREENSHOOTS_SRC="D:\monitor\assests"
 # 同步图片项目文件夹  蓝叠
 # customUtils,Utils  temp不用变
 # 1. 把截图文件复制到项目资源文件夹 
-DEFAULT_SRC="${SCREENSHOOTS_SRC}"
-DEFAULT_DESTS=(
-   "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
-   # 添加新路径直接换行写在这里
-)
+# DEFAULT_SRC="${SCREENSHOOTS_SRC}"
+# DEFAULT_DESTS=(
+#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
+#    # 添加新路径直接换行写在这里
+# )
 
  
 
