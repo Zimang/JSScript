@@ -1,8 +1,24 @@
-PROJECT_NAME="com_superminds_goods_sorting_triple_match3d"  # 定义项目名称变量
-PRODUCTION_NAME="com.superminds.goods.sorting.triple.match3d"  # 定义项目名称变量
+ 
+PRODUCTION_NAME="com.blackout.word"  # 定义项目名称变量
+PROJECT_NAME="${PRODUCTION_NAME//./_}"  # 用下划线替换点，自动生成 PROJECT_NAME
+
+
+
 # PROJECT_NAME="bloodsugar_diabetes_pressuretraker"  # 定义项目名称变量
 mkdir -p "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/assests"
 SCREENSHOOTS_SRC="D:\monitor\assests"
+# 替换函数：将 "包名" → PRODUCTION_NAME，"包_名" → PROJECT_NAME，"包名.autojs" → PRODUCTION_NAME.autojs
+replace_placeholders_in_file() {
+    local file="$1"
+    if [[ "$file" == *.js ]]; then
+        sed -i "s/\"包名.autojs\"/\"${PRODUCTION_NAME}.autojs\"/g" "$file"
+        sed -i "s/\"包名\"/\"${PRODUCTION_NAME//\./\\.}\"/g" "$file"
+        sed -i "s/\"包_名\"/\"${PROJECT_NAME}\"/g" "$file"
+        echo "已替换占位符: $file"
+    fi
+}
+
+
 
  # # # 创建项目 temp
 # # 默认配置区域（可在此修改或添加路径）
@@ -20,14 +36,7 @@ SCREENSHOOTS_SRC="D:\monitor\assests"
 #    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/customUtils.js"
 #    # 添加新路径直接换行写在这里
 # )
-
-# # 创建项目 utils
-# # 默认配置区域（可在此修改或添加路径）
-# DEFAULT_SRC="D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/utils.js"
-# DEFAULT_DESTS=(
-#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/utils.js"
-#    # 添加新路径直接换行写在这里
-# )
+ 
 
 # 同步只需要同步customUtils  雷电&蓝叠
 # DEFAULT_SRC="D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/customUtils.js"
@@ -41,28 +50,11 @@ SCREENSHOOTS_SRC="D:\monitor\assests"
 # 同步图片项目文件夹  蓝叠
 # customUtils,Utils  temp不用变
 # 1. 把截图文件复制到项目资源文件夹 
-# DEFAULT_SRC="${SCREENSHOOTS_SRC}"
-# DEFAULT_DESTS=(
-#    "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
-#    # 添加新路径直接换行写在这里
-# )
-
- 
-
-# DEFAULT_SRC="C:/Users/Admin/Documents/leidian9/Pictures/utils.js"
-# DEFAULT_DESTS=(
-#     "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/utils.js"
-#     "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/utils.js"
-#     # 添加新路径直接换行写在这里
-# )
-
-
-# DEFAULT_SRC="C:/Users/Admin/Documents/leidian9/Pictures/temp_demo.js"
-# DEFAULT_DESTS=(
-#     "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/temp_demo.js"
-#     # 添加新路径直接换行写在这里
-# )
-
+DEFAULT_SRC="${SCREENSHOOTS_SRC}"
+DEFAULT_DESTS=(
+   "D:/workplace/AutoX-6.5.8/app/src/main/assets/sample/zimang/${PROJECT_NAME}/"
+   # 添加新路径直接换行写在这里
+) 
 
 # 参数处理
 if [ $# -eq 0 ]; then
@@ -117,10 +109,22 @@ copy_with_dir() {
     fi
 }
 
+# # 主循环
+# for dest in "${dests[@]}"; do
+#     copy_with_dir "$src" "$dest"
+# done
+
 # 主循环
 for dest in "${dests[@]}"; do
     copy_with_dir "$src" "$dest"
+    # 如果是文件，且扩展名是 .js，则执行占位符替换
+    if [ -f "$src" ] && [[ "$dest" == *.js ]]; then
+        replace_placeholders_in_file "$dest"
+    fi
 done
+
+
+
 
 echo "操作完成"
 

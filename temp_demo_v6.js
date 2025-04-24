@@ -110,7 +110,8 @@ function shift(){
     gesture(1000,[TAP.x,TAP.y],[TAP.x,TAP.y-500])  
     // press(TAP.x*0.75,TAP.y*1.5,1000)  
 }
-
+let der=zutils.createCircleDrawer(TAP.x,TAP.y,200,800)
+// der.drawCircle(20)
 // 检查当前页面结构是否满足游戏界面
 // function checkADTime(){
 //     sleep(500)
@@ -172,6 +173,12 @@ function singleTest(){
     //     ["t","Next",1000,1000],  
     // ])
       
+    let tt=new zutils.CachedBT(
+        "cut_1_1.png",getPath(""),"buttom 1"
+    ) 
+
+    //转圈
+    // der.drawCircle(20)
 
     // zutils.clickFromPath([0, 1, 0, 0, 0, 0, 0, 1, 1])
     // guid()
