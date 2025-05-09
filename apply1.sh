@@ -1,5 +1,5 @@
  
-PRODUCTION_NAME="com.blackout.word"  # 定义项目名称变量
+PRODUCTION_NAME="net.wyvernware.findthealien2"  # 定义项目名称变量
 PROJECT_NAME="${PRODUCTION_NAME//./_}"  # 用下划线替换点，自动生成 PROJECT_NAME
 
 
@@ -56,9 +56,20 @@ DEFAULT_DESTS=(
    # 添加新路径直接换行写在这里
 ) 
 
+
+# # 复制所有文件到input
+# DEFAULT_SRC="${SCREENSHOOTS_SRC}"
+# DEFAULT_DESTS=(
+#    "D:/workplace/autojs_result/input/"
+#    # 添加新路径直接换行写在这里
+# ) 
+
+ 
+
 # 参数处理
 if [ $# -eq 0 ]; then
     src="$DEFAULT_SRC"
+    dests=("${DEFAULT_DESTS[@]}")
     dests=("${DEFAULT_DESTS[@]}")
 else
     src="$1"

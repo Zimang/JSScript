@@ -116,6 +116,7 @@ function Match(point, similarity, scaleX, scaleY) {
 
 var isCacheDPI=false
 var cacheDPI=undefined
+var isAllColor=false
 
 function getCachedInfo(){
     return {
@@ -129,6 +130,15 @@ function enableDPICache(toCache,dpi){
         cacheDPI=dpi
     }
     isCacheDPI=toCache
+    if(!isCacheDPI){
+        //归零
+        cacheDPI=undefined
+    }
+}
+
+function setColorFulSearch(bo){
+    isAllColor=bo
+    clog("isAllColor="+isAllColor)
 }
 
 /**
@@ -157,11 +167,16 @@ function matchTemplate(img, template, options) {
         largeMat = new Mat(largeMat, options.region);
     }
     // 灰度处理
-    if (options.grayTransform) {
+    if (options.grayTransform&&!isAllColor) {
+        clog("使用灰度")
         largeGrayMat = new Mat();
         Imgproc.cvtColor(largeMat, largeGrayMat, Imgproc.COLOR_BGR2GRAY);
         templateGrayMat = new Mat();
         Imgproc.cvtColor(templateMat, templateGrayMat, Imgproc.COLOR_BGR2GRAY);
+    }else{ 
+        clog("不使用灰度")
+        largeGrayMat =largeMat; 
+        templateGrayMat = templateMat; 
     }
 
     // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
@@ -192,8 +207,11 @@ function matchTemplate(img, template, options) {
         Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
         let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
         console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
-        if(currentMatches.length==1){ 
-            cacheDPI=factor
+        // if(currentMatches.length==1){ //如果大于1就会有问题
+        //     cacheDPI=factor
+        // }
+        if(currentMatches.length>=1&&cacheDPI==undefined){ 
+            cacheDPI=factor  //cachedDPI必须手动归零
         }
         for (let match of currentMatches) {
             if (finalMatches.length === 0) {
@@ -246,13 +264,18 @@ function cachedMatchTemplate(img, template, options) {
         largeMat = new Mat(largeMat, options.region);
     }
     // 灰度处理
-    if (options.grayTransform) {
+    // 灰度处理
+    if (options.grayTransform&&!isAllColor) {
+        clog("使用灰度")
         largeGrayMat = new Mat();
         Imgproc.cvtColor(largeMat, largeGrayMat, Imgproc.COLOR_BGR2GRAY);
         templateGrayMat = new Mat();
         Imgproc.cvtColor(templateMat, templateGrayMat, Imgproc.COLOR_BGR2GRAY);
+    }else{ 
+        clog("不使用灰度")
+        largeGrayMat =largeMat; 
+        templateGrayMat = templateMat; 
     }
-
     // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
     // =================================================
     let finalMatches = [];
@@ -514,24 +537,30 @@ function createCircleDrawer(centerX,centerY,radius,points){
         mReversedGesturePoints.push(mGesturePoints[i]);
     } 
 
-    drawer.drawCircle=(round,interval)=>{
+    drawer.drawCircle=(round,interval,delay)=>{
         if(!interval){
             interval=500
         }
+        if(!delay){
+            delay=500
+        }
         zutils.repeatFunction(() => {
             gesture(interval, mGesturePoints);
-            sleep(interval)
+            sleep(delay)
             clog("转圈圈一次") 
         }, round)
     }
 
-    drawer.drawCircleBackwards=(round,interval)=>{
+    drawer.drawCircleBackwards=(round,interval,delay)=>{
         if(!interval){
             interval=500
         }
+        if(!delay){
+            delay=500
+        }
         zutils.repeatFunction(() => {
             gesture(interval, mReversedGesturePoints);
-            sleep(interval)
+            sleep(delay)
             clog("转圈圈一次") 
         }, round)
     }
@@ -626,12 +655,59 @@ function findSingleColorfulPicTo(fn, tar, delay, source) {
         return false
     }
 }
-function findSinglePicFromPathTo(fn, tarp, delay, source) {
-    if (!source) {
-        var img = captureScreen();
-        images.saveImage(img, "/sdcard/1.jpg", "jpg");
-        var source = images.read("/sdcard/1.jpg");
+
+function safeCaptureClone() {
+    let img = captureScreen();
+    if (!img) return null;
+    sleep(30);
+    try {
+        return img.clone();
+    } catch (e) {
+        log("截图克隆失败：" + e);
+        return null;
     }
+}
+
+
+function findSinglePicFromPathTo(fn, tarp, delay, source) {
+    // if (!source) {
+    //     var img = captureScreen();
+    //     images.saveImage(img, "/sdcard/1.jpg", "jpg");
+    //     var source = images.read("/sdcard/1.jpg");
+    // }
+
+    // clog("开始截图...");
+    var img = captureScreen();
+    // clog("截图结果: " + (img ? "成功" : "失败"));
+    
+    if (img) {
+        try {
+            // clog("尝试保存截图到 /sdcard/1.jpg...");
+            images.saveImage(img, "/sdcard/1.jpg", "jpg");
+            // clog("保存成功！");
+        } catch (e) {
+            clog("保存图片失败！错误：" + e);
+        }
+    } else {
+        clog("img 是 null，无法保存！");
+    }
+    
+    // clog("尝试读取图片...");
+    var source = images.read("/sdcard/1.jpg");
+    // clog("读取结果: " + (source ? "成功" : "失败"));
+    
+    if (source) {
+        try {
+            // clog("source 宽高：" + source.getWidth() + "x" + source.getHeight());
+        } catch (e) {
+            clog("获取宽高时报错（可能已被回收）：" + e);
+        }
+    }
+    
+
+
+
+
     var tar = images.read(tarp);
     clog("sou w and h " + source.getWidth() + " " + source.getHeight())
     clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
@@ -1399,29 +1475,58 @@ CachedBT.prototype.existCheck = function() {
     );
 };  
 CachedBT.prototype.waitMe = function(fn,interval,round) {
-    if(interval==undefined){
+    if(!interval){
         interval=500
     }
-    if(fn==undefined){
+    if(!fn){
         fn=no_action
     }
-    if(round==undefined||round<=1){
-        round=10
+    if(!round||round<=1){
+        round=500
     }
     var count =0
-    while(!follow(
-        [[this.img, this.delay]],
-        this.prefix,
-        fn
-    )) {
+    while(!this.locate(0)){ 
         count++
         clog("等待"+this.tag)
-        sleep(delay)
+        sleep(interval)
         if(count==round){
             return false
         }
     }
-    return true
+    fn(this.x, this.y, this.w, this.h);
+    return true 
+}; 
+  
+/**
+ * 
+ * @param {*} braekFn 该函数返回true提前退出
+ * @param {*} finalfn 找到后执行
+ * @param {*} interval step time
+ * @param {*} round steps
+ * @returns 
+ */
+CachedBT.prototype.waitMeBy = function(braekFn, finalfn,interval,round) {
+    if(!interval){
+        interval=500
+    }
+    if(!fn){
+        fn=no_action
+    }
+    if(!round||round<=1){
+        round=500
+    }
+    var count =0
+    while(!this.locate(0)){ 
+        count++
+        clog("等待"+this.tag)
+        
+        sleep(interval)
+        if(count==round||braekFn()){
+            return false
+        }
+    }
+    finalfn(this.x, this.y, this.w, this.h);
+    return true 
 }; 
   
 CachedBT.prototype.existApply = function(fn,onlyPeek) {
@@ -1441,7 +1546,7 @@ CachedBT.prototype.existApply = function(fn,onlyPeek) {
         return true
     } else {
         
-        clog("没有找到图片:" + this.img); // 模板字符串改为拼接
+        clog("没有找到图片:" + this.img+" dpi : "+cacheDPI); // 模板字符串改为拼接
         if(!onlyPeek){
             enableDPICache(false)
         }
@@ -2522,6 +2627,8 @@ function afollow(arr) {
                 comp=idMatches(regex).findOne(1000);
             }else if(type==="d"){
                 comp=descMatches(regex).findOne(1000);
+            }else if(type==="class"){
+                comp=classNameMatches(regex).findOne(1000);
             }else{
                 clog("暂不支持 "+type+" 视作d")
                 comp=descMatches(regex).findOne(1000);
@@ -2881,7 +2988,9 @@ module.exports = {
     autoCachedBT, //自动保存DPI
     getCachedInfo, //获取缓存信息
     enableDPICache, //使能缓存
+    setColorFulSearch, //使用彩色搜图
     findAllCirclesFromPoints,//找多个圆
-    create2PointGenerator
+    create2PointGenerator,
+    safeCaptureClone
 };
  

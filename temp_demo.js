@@ -67,7 +67,7 @@ function agree(x,y,w,h){
 
 function right2Left(){ 
     // swipe(TAP.x,TAP.y,TAP.x,TAP.y-400,200) 
-    gesture(1000,[TAP.x,TAP.y],[0,TAP.y])  
+    gesture(1000,[TAP.x*1.5,TAP.y],[0,TAP.y])  
     sleep(500)
     return true
     // press(TAP.x*0.75,TAP.y*1.5,1000)  
@@ -131,8 +131,12 @@ function grant(){
 }
 function guid(){
     grant()
+
     // zutils.afollow([
     //     ["t","This device isn’t Play Protect certified",0,0,backForGoogleProtect]
+    // ])
+    // zutils.afollow([
+    //     ["t","Sign in to find the latest Android apps, games, movies, music, & more",0,0,backForGoogleProtect]
     // ])
 }
 function shift(){ 
@@ -552,29 +556,31 @@ function main(){
     console.log("start")
     
     adapt()
-    singleTest()
+    // zutils.setColorFulSearch(true)
+    // singleTest()
     
     // 记得打包要切换路径
     // 记得很横板要切换截图模式
     // // warmup play
-    // app.launch(projR)
-   // // app.startActivity({ 
-  //  //     packageName: "包名",
-  //  //     className: "包名.LauncherActivity"
-  //  //   });
+    app.launch(projR)
+   // app.startActivity({ 
+   //     packageName: "包名",
+   //     className: "包名.LauncherActivity"
+   //   });
 
-    // sleep(5000)
+    sleep(5000)
     // const endTimeMillis = Date.now() + getRandomInt(4 * 60 * 1000, 6 * 60 * 1000);
-    // const intervalRange = { min: 1000, max: 3000 };
-    // // 循环执行，直到当前时间超过结束时间
+    const intervalRange = { min: 1000, max: 3000 };
+    // 循环执行，直到当前时间超过结束时间
     // while (Date.now() < endTimeMillis) { 
-    //     guid()
-    //     loopPlay()
-    //     singleLoop()
-    //     const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
-    //     sleep(sleepTime);
-    // } 
-    console.log("edn")
+    while (true) { 
+        guid()
+        loopPlay()
+        singleLoop()
+        const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
+        sleep(sleepTime);
+    } 
+    // console.log("edn")
 }
 runtime.getImages().initOpenCvIfNeeded();
 startJs()

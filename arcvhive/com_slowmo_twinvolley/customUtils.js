@@ -114,6 +114,33 @@ function Match(point, similarity, scaleX, scaleY) {
     this.scaleY = scaleY;
 }
 
+var isCacheDPI=false
+var cacheDPI=undefined
+var isAllColor=false
+
+function getCachedInfo(){
+    return {
+        isCached:isCacheDPI,
+        cacheDPI:cacheDPI,
+    }
+}
+
+function enableDPICache(toCache,dpi){
+    if(dpi){
+        cacheDPI=dpi
+    }
+    isCacheDPI=toCache
+    if(!isCacheDPI){
+        //归零
+        cacheDPI=undefined
+    }
+}
+
+function setColorFulSearch(bo){
+    isAllColor=bo
+    clog("isAllColor="+isAllColor)
+}
+
 /**
  * 找图，在图中找出所有匹配的位置
  * @param {Image} img
@@ -132,7 +159,7 @@ function matchTemplate(img, template, options) {
     let largeMat = img.mat;
     let templateMat = template.mat;
 
-    // console.log("temp ", templateMat,"lar ",largeMat);
+    // console.log("temp ", templateMat," lar ",largeMat);
     let largeGrayMat;
     let templateGrayMat;
     if (options.region) {
@@ -140,16 +167,22 @@ function matchTemplate(img, template, options) {
         largeMat = new Mat(largeMat, options.region);
     }
     // 灰度处理
-    if (options.grayTransform) {
+    if (options.grayTransform&&!isAllColor) {
+        clog("使用灰度")
         largeGrayMat = new Mat();
         Imgproc.cvtColor(largeMat, largeGrayMat, Imgproc.COLOR_BGR2GRAY);
         templateGrayMat = new Mat();
         Imgproc.cvtColor(templateMat, templateGrayMat, Imgproc.COLOR_BGR2GRAY);
+    }else{ 
+        clog("不使用灰度")
+        largeGrayMat =largeMat; 
+        templateGrayMat = templateMat; 
     }
 
     // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
     // =================================================
     let finalMatches = [];
+    // if(isCacheDPI)
     for (let factor of options.scaleFactors) {
         let [fx, fy] = factor;
         let resizedTemplate = new Mat();
@@ -173,7 +206,13 @@ function matchTemplate(img, template, options) {
 
         Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
         let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
-        //  console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+        console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+        // if(currentMatches.length==1){ //如果大于1就会有问题
+        //     cacheDPI=factor
+        // }
+        if(currentMatches.length>=1&&cacheDPI==undefined){ 
+            cacheDPI=factor  //cachedDPI必须手动归零
+        }
         for (let match of currentMatches) {
             if (finalMatches.length === 0) {
                 finalMatches = currentMatches.slice(0, options.max);
@@ -192,6 +231,94 @@ function matchTemplate(img, template, options) {
             break;
         }
     }
+    largeMat !== img.mat && largeMat.release();
+    largeGrayMat && largeGrayMat.release();
+    templateGrayMat && templateGrayMat.release();
+
+    return finalMatches;
+}
+
+/**
+ * 找图，在图中找出所有匹配的位置
+ * @param {Image} img
+ * @param {Image} template
+ * @param {MatchOptions} options 参数见上方定义
+ * @returns {Match[]}
+ */
+function cachedMatchTemplate(img, template, options) {
+    // console.log(Imgproc.resize.toString())
+    if (img == null || template == null) {
+        throw new Error('ParamError img null:' + img == null + " temp == null:" + template == null);
+    }
+    options = MatchOptions.check(options);
+    // console.log('参数：', options);
+
+    let largeMat = img.mat;
+    let templateMat = template.mat;
+
+    // console.log("temp ", templateMat," lar ",largeMat);
+    let largeGrayMat;
+    let templateGrayMat;
+    if (options.region) {
+        options.region = buildRegion(options.region, img);
+        largeMat = new Mat(largeMat, options.region);
+    }
+    // 灰度处理
+    // 灰度处理
+    if (options.grayTransform&&!isAllColor) {
+        clog("使用灰度")
+        largeGrayMat = new Mat();
+        Imgproc.cvtColor(largeMat, largeGrayMat, Imgproc.COLOR_BGR2GRAY);
+        templateGrayMat = new Mat();
+        Imgproc.cvtColor(templateMat, templateGrayMat, Imgproc.COLOR_BGR2GRAY);
+    }else{ 
+        clog("不使用灰度")
+        largeGrayMat =largeMat; 
+        templateGrayMat = templateMat; 
+    }
+    // console.log("tempG ", templateGrayMat,"larG ",largeGrayMat);
+    // =================================================
+    let finalMatches = [];
+    if(isCacheDPI&&cacheDPI!=undefined){
+
+        let factor =cacheDPI
+        let [fx, fy] = factor;
+        let resizedTemplate = new Mat();
+        // console.log("templateGrayMat || templateMat ",templateGrayMat || templateMat);
+
+        Imgproc.resize(templateGrayMat || templateMat, resizedTemplate, new Size(), fx, fy, Imgproc.INTER_LINEAR);
+        // 执行模板匹配，标准化相关性系数匹配法
+        let matchMat = new Mat();
+        //
+        //    console.log('新的temp 长宽 '+resizedTemplate.size().height+" "+resizedTemplate.size().width);
+        //    console.log('新的imag 长宽 '+largeMat.size().height+" "+largeMat.size().width);
+        // 检查 resizedTemplate 的尺寸是否超过 largeMat 的尺寸
+        // 放缩因子可能会导致在蚂蚁窝找大象的问题        
+        if (resizedTemplate.size().height > largeMat.size().height ||
+            resizedTemplate.size().width > largeMat.size().width) {
+            console.log('放缩后存在冲突');
+            resizedTemplate.release(); 
+        } else{
+            Imgproc.matchTemplate(largeGrayMat || largeMat, resizedTemplate, matchMat, Imgproc.TM_CCOEFF_NORMED);
+            let currentMatches = _getAllMatch(matchMat, resizedTemplate, options.threshold, factor, options.region);
+             console.log('缩放比：', factor, '可疑目标数：', currentMatches.length);
+            for (let match of currentMatches) {
+                if (finalMatches.length === 0) {
+                    finalMatches = currentMatches.slice(0, options.max);
+                    break;
+                }
+                if (!isOverlapping(finalMatches, match)) {
+                    finalMatches.push(match);
+                }
+                if (finalMatches.length >= options.max) {
+                    break;
+                }
+            }
+            resizedTemplate.release();
+            matchMat.release();  
+        }
+    } 
+
     largeMat !== img.mat && largeMat.release();
     largeGrayMat && largeGrayMat.release();
     templateGrayMat && templateGrayMat.release();
@@ -303,13 +430,24 @@ function clickTargetPicCentral(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -331,7 +469,7 @@ function clickTargetPicCentral(tar, delay, source) {
         return false
     }
 }
-
+//锚定屏幕中点的画圈器
 var radius = 200; //200
 var points = 20;
 var reversedGesturePoints = [];
@@ -375,6 +513,59 @@ function drawCircle(round) {// 获取屏幕的宽度和高度
     clog("反转")
 }
 
+/**
+ * 自定义画圈器
+ * @param {*} centerX 
+ * @param {*} centerY 
+ * @param {*} radius 
+ * @param {*} points 
+ * @returns 
+ */
+function createCircleDrawer(centerX,centerY,radius,points){
+    const drawer=()=>{
+
+    }
+    const mReversedGesturePoints = [];
+    const mGesturePoints = [];
+    for (var i = 0; i <= points; i++) {
+        var angle = (i / points) * 2 * Math.PI; // 计算角度
+        var x = centerX + radius * Math.cos(angle); // 计算 x 坐标
+        var y = centerY + radius * Math.sin(angle); // 计算 y 坐标
+        mGesturePoints.push([x, y]);
+    }
+    for (var i = mGesturePoints.length - 1; i >= 0; i--) {
+        mReversedGesturePoints.push(mGesturePoints[i]);
+    } 
+
+    drawer.drawCircle=(round,interval,delay)=>{
+        if(!interval){
+            interval=500
+        }
+        if(!delay){
+            delay=500
+        }
+        zutils.repeatFunction(() => {
+            gesture(interval, mGesturePoints);
+            sleep(delay)
+            clog("转圈圈一次") 
+        }, round)
+    }
+
+    drawer.drawCircleBackwards=(round,interval,delay)=>{
+        if(!interval){
+            interval=500
+        }
+        if(!delay){
+            delay=500
+        }
+        zutils.repeatFunction(() => {
+            gesture(interval, mReversedGesturePoints);
+            sleep(delay)
+            clog("转圈圈一次") 
+        }, round)
+    }
+    return drawer
+}
 
 function findSinglePicTo(fn, tar, delay, source) {
     if (!source) {
@@ -383,13 +574,26 @@ function findSinglePicTo(fn, tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    clog("sou w and h " + source.getWidth() + " " + source.getHeight())
+    clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
+    var res
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -417,13 +621,25 @@ function findSingleColorfulPicTo(fn, tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    clog("sou w and h " + source.getWidth() + " " + source.getHeight())
+    clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -439,21 +655,80 @@ function findSingleColorfulPicTo(fn, tar, delay, source) {
         return false
     }
 }
-function findSinglePicFromPathTo(fn, tarp, delay, source) {
-    if (!source) {
-        var img = captureScreen();
-        images.saveImage(img, "/sdcard/1.jpg", "jpg");
-        var source = images.read("/sdcard/1.jpg");
+
+function safeCaptureClone() {
+    let img = captureScreen();
+    if (!img) return null;
+    sleep(30);
+    try {
+        return img.clone();
+    } catch (e) {
+        log("截图克隆失败：" + e);
+        return null;
     }
+}
+
+
+function findSinglePicFromPathTo(fn, tarp, delay, source) {
+    // if (!source) {
+    //     var img = captureScreen();
+    //     images.saveImage(img, "/sdcard/1.jpg", "jpg");
+    //     var source = images.read("/sdcard/1.jpg");
+    // }
+
+    // clog("开始截图...");
+    var img = captureScreen();
+    // clog("截图结果: " + (img ? "成功" : "失败"));
+    
+    if (img) {
+        try {
+            // clog("尝试保存截图到 /sdcard/1.jpg...");
+            images.saveImage(img, "/sdcard/1.jpg", "jpg");
+            // clog("保存成功！");
+        } catch (e) {
+            clog("保存图片失败！错误：" + e);
+        }
+    } else {
+        clog("img 是 null，无法保存！");
+    }
+    
+    // clog("尝试读取图片...");
+    var source = images.read("/sdcard/1.jpg");
+    // clog("读取结果: " + (source ? "成功" : "失败"));
+    
+    if (source) {
+        try {
+            // clog("source 宽高：" + source.getWidth() + "x" + source.getHeight());
+        } catch (e) {
+            clog("获取宽高时报错（可能已被回收）：" + e);
+        }
+    }
+    
+
+
+
+
     var tar = images.read(tarp);
+    clog("sou w and h " + source.getWidth() + " " + source.getHeight())
+    clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -481,14 +756,26 @@ function findSingleColorfulPicFromPathTo(fn, tarp, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     var tar = images.read(tarp);
+    clog("sou w and h " + source.getWidth() + " " + source.getHeight())
+    clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -511,19 +798,29 @@ function clickTargetPicCentralFromPath(tarp, delay, source) {
         var img = captureScreen();
         images.saveImage(img, "/sdcard/1.jpg", "jpg");
         var source = images.read("/sdcard/1.jpg");
-    }
-    clog("w and h " + source.getWidth() + " " + source.getHeight())
+    } 
     if (!delay) delay = 0
     var tar = images.read(tarp);
-    clog("w and h tar" + tar.getWidth() + " " + tar.getHeight())
+    clog("sou w and h " + source.getWidth() + " " + source.getHeight())
+    clog("tar w and h " + tar.getWidth() + " " + tar.getHeight())
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -546,6 +843,10 @@ function clickTargetPicCentralFromPath(tarp, delay, source) {
         return false
     }
 }
+
+
+
+
 function clog(msg) {
     console.log(msg)
 }
@@ -558,13 +859,23 @@ function clickColorfulTargetPicCentralFromPath(tarp, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     var tar = images.read(tarp);
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -594,13 +905,23 @@ function clickColorfulTargetPicLeftTop(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -635,13 +956,23 @@ function clickColorfulTargetPicLeftTopFromPath(tarp, delay, source) {
         images.saveImage(img, "/sdcard/1.jpg", "jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -671,13 +1002,23 @@ function clickTargetPicLeftTop(tar, delay, source) {
         var source = images.read("/sdcard/1.jpg");
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -741,13 +1082,23 @@ function clickTargetPicLeftTopFromPath(tarp, delay, source) {
     }
     var tar = images.read(tarp);
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: true,
-        // scaleFactors: [ 1.6],
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
 
         let match = res[0];
@@ -781,14 +1132,23 @@ function swipeTargetPicLeft(tar, delay, dur, source) {
         dur = 200
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: 1
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         let match = res[0];
         let match_x = match.point.x + tar.width * match.scaleX * 0.5
@@ -821,14 +1181,23 @@ function swipeTargetPicLeftFromPath(tarp, delay, dur, source) {
         dur = 200
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: 1
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         let match = res[0];
         let match_x = match.point.x + tar.width * match.scaleX * 0.5
@@ -861,14 +1230,23 @@ function clickAllPicsCentral(tar, delay, picNum, intervalT, source) {
         intervalT = 20
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: picNum
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         for (let match of res) {
             var x = Number(match.point.x) + Number(tar.width) * Number(match.scaleX) * 0.5;
@@ -902,14 +1280,23 @@ function clickAllPicsCentralFromPath(tarp, delay, picNum, intervalT, source) {
         intervalT = 20
     }
     //    console.log("zim"+source.width)
-    var res = matchTemplate(source, tar, {
-        threshold: 0.85,
-        region: [100, 100],
-        grayTransform: false,
-        scaleFactors: [1, 0.6, 0.7, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
-        // scaleFactors: [ 1.6],
-        max: picNum
-    })
+    if(isCacheDPI){
+        res = cachedMatchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }else{
+        res = matchTemplate(source, tar, {
+            threshold: 0.85,
+            region: [100, 100],
+            grayTransform: true,
+            // scaleFactors: [ 1.6],
+            scaleFactors: [1, 0.6, 0.7, 0.75, 0.9, 1.1, 0.8, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0],
+        })
+    }
     if (res.length >= 1) {
         for (let match of res) {
             var x = Number(match.point.x) + Number(tar.width) * Number(match.scaleX) * 0.5;
@@ -966,6 +1353,233 @@ function landScapeCentralClick(delay) {
     click(device.height * 0.5, device.width * 0.5)
     sleep(delay)
 }
+
+function no_action(x,y,w,h){
+ 
+}
+// /**
+//  * img 图片资源
+//  * delay 查找图片后的延时
+//  * actionDelay 操作后的延时
+//  */
+// class CachedBT {
+//     constructor(img,prefix,delay=500,actionDelay=100) {
+//       this.x = undefined;  // 坐标x
+//       this.y = undefined;  // 坐标y
+//       this.w = undefined;  // 坐标y
+//       this.h = undefined;  // 坐标y
+//       this.img =img ;  // 图片
+//       this.prefix =prefix ;  // 图片
+//       this.delay =delay ;  // 图片
+//       this.actionDelay =actionDelay ;  // 图片
+//     }
+  
+//     // 点击方法
+//     click() {
+//       if (this.x && this.y) {
+//         click(this.x, this.y);
+//       }
+//     }
+  
+//     // 搜图然后初始化
+//     existCheck() {
+//       return follow(
+//         [[this.img, this.delay]],
+//         this.prefix,
+//         no_action // 绑定this以确保回调中能访问实例
+//       )
+//     }  
+//     // 搜图然后初始化
+//     /**
+//      * 
+//      * @param {*} fn centerX, centerY, w, h 
+//      * @returns 
+//      */
+//     existApply(fn) {
+//       if(follow(
+//         [[this.img, this.delay]],
+//         this.prefix,
+//         this.catchPoint.bind(this) // 绑定this以确保回调中能访问实例
+//       )){
+//         fn(this.x,this.y,this.w,this.h)
+//       }else{
+//         clog("没有找到图片:"+this.img)
+//       }
+//     }
+
+//     locate(){
+//         return follow(
+//             [[this.img, this.delay]],
+//             this.prefix,
+//             this.catchPoint.bind(this)  // 绑定this以确保回调中能访问实例
+//           )
+//     }
+  
+//     // 是否cache
+//     check() {
+//       if (this.x&&this.y) {
+//         return true; //找到了
+//       } else {
+//         return false; //没有找到
+//       }
+//     }
+  
+//     // 坐标捕获方法
+//     //必须要求
+//     catchPoint(x, y, w, h) {
+//       this.x = x + w / 2;  // 计算中心点x
+//       this.y = y + h / 2;  // 计算中心点y
+//       this.w=w;
+//       this.h=h;
+//       clog(this);          // 日志输出当前实例
+//       sleep(this.actionDelay);
+//     }
+// }
+
+var mauto=false
+function autoCachedBT(mAuto){
+    mauto=mAuto
+}
+// 使用构造函数替代 class
+function CachedBT(img, prefix,tag, delay, actionDelay) {
+    // 默认参数处理（ES5 无默认参数语法）
+    delay = typeof delay !== 'undefined' ? delay : 500;
+    tag = typeof tag !== 'undefined' ? tag : "unknown";
+    actionDelay = typeof actionDelay !== 'undefined' ? actionDelay : 100;
+  
+    // 初始化属性
+    this.x = undefined;
+    this.y = undefined;
+    this.w = undefined;
+    this.h = undefined;
+    this.tag = tag;
+    this.mauto = false;
+    this.img = img;
+    this.prefix = prefix;
+    this.delay = delay;
+    this.actionDelay = actionDelay;
+}
+
+// 方法定义在原型链上
+CachedBT.prototype.click = function() {
+    if (this.x && this.y) {
+        click(this.x, this.y);
+    }
+};
+
+CachedBT.prototype.existCheck = function() {
+    return follow(
+        [[this.img, this.delay]],
+        this.prefix,
+        no_action
+    );
+};  
+CachedBT.prototype.waitMe = function(fn,interval,round) {
+    if(!interval){
+        interval=500
+    }
+    if(!fn){
+        fn=no_action
+    }
+    if(!round||round<=1){
+        round=500
+    }
+    var count =0
+    while(!this.locate(0)){ 
+        count++
+        clog("等待"+this.tag)
+        sleep(interval)
+        if(count==round){
+            return false
+        }
+    }
+    fn(this.x, this.y, this.w, this.h);
+    return true 
+}; 
+  
+/**
+ * 
+ * @param {*} braekFn 该函数返回true提前退出
+ * @param {*} finalfn 找到后执行
+ * @param {*} interval step time
+ * @param {*} round steps
+ * @returns 
+ */
+CachedBT.prototype.waitMeBy = function(braekFn, finalfn,interval,round) {
+    if(!interval){
+        interval=500
+    }
+    if(!fn){
+        fn=no_action
+    }
+    if(!round||round<=1){
+        round=500
+    }
+    var count =0
+    while(!this.locate(0)){ 
+        count++
+        clog("等待"+this.tag)
+        
+        sleep(interval)
+        if(count==round||braekFn()){
+            return false
+        }
+    }
+    finalfn(this.x, this.y, this.w, this.h);
+    return true 
+}; 
+  
+CachedBT.prototype.existApply = function(fn,onlyPeek) {
+    if(onlyPeek==undefined){
+        onlyPeek=true
+    }
+    var result = follow(
+        [[this.img, this.delay]],
+        this.prefix,
+        this.catchPoint.bind(this) // 保持 this 指向
+    );
+    if (result) {
+        if(mauto&&!onlyPeek){
+            enableDPICache(true)
+        }
+        fn(this.x, this.y, this.w, this.h);
+        return true
+    } else {
+        
+        clog("没有找到图片:" + this.img+" dpi : "+cacheDPI); // 模板字符串改为拼接
+        if(!onlyPeek){
+            enableDPICache(false)
+        }
+        return false
+    }
+};
+ 
+CachedBT.prototype.locate = function(pre) {
+    if(pre==undefined) pre=500 
+    return follow(
+        [[this.img, this.delay,pre]],
+        this.prefix,
+        this.catchPoint.bind(this)
+    );
+};
+
+CachedBT.prototype.check = function() {
+    return !!this.x && !!this.y;
+};
+
+CachedBT.prototype.catchPoint = function(x, y, w, h) {
+    if(mauto){
+        enableDPICache(true)
+    }else{
+        enableDPICache(false)
+    }
+    this.x = x + w / 2;
+    this.y = y + h / 2;
+    this.w = w;
+    this.h = h;
+    clog(this);
+    sleep(this.actionDelay);
+};
 
 //wait2do 
 //等到某个事件出现（图片，组件），然后去做某件事情
@@ -1342,6 +1956,8 @@ function detectAndClickControlsByRoundsWith(round, fn) {
 }
 
 
+
+
 //初始化 检查分辨率，检查初始
 
 /** 日期 */
@@ -1362,6 +1978,15 @@ function formatDate(now) {
     return res;
 }
 
+/**
+ * 方法生成器，方法可以给出随机的水平或者垂直的两点
+ * @param {*} rectWidth  范围内的宽
+ * @param {*} rectHeight  范围内的高
+ * @param {*} distance  两点距离
+ * @param {*} addX  start
+ * @param {*} addY  top
+ * @returns 
+ */
 function create2PointGenerator(rectWidth, rectHeight, distance, addX, addY) {
     if (!addX) addX = 0
     if (!addY) addY = 0
@@ -1488,11 +2113,14 @@ function ids(arr) {
             landScapeCentralClick(d);
         } else {
             // clog("操作 id "+p)
-            var comp = id(p).findOne(500)
+            var comp = id(p).findOne(1000)
             if (comp) {
-                comp.click()
+                // comp.click()
+                click(comp.bounds().centerX(),
+                 comp.bounds().centerY()
+                )
             } else {
-                // clog("id not foud "+p)
+                clog("id not foud "+p)
             }
             sleep(d)
         }
@@ -1526,9 +2154,12 @@ function ts(arr) {
             landScapeCentralClick(d);
         } else {
             clog("操作 text " + p)
-            let comp = text(p).findOne(500)
+            let comp = text(p).findOne(1000)
             if (comp) {
-                comp.click()
+                // comp.click()
+                click(comp.bounds().centerX(),
+                  comp.bounds().centerY()
+                )
             } else {
                 clog("text not foud " + p)
             }
@@ -1656,6 +2287,21 @@ function fs(arr, prefix, fn) {
  */
 function follow(arr, prefix, fn) {
     for (let i = 0; i < arr.length; i++) {
+        current = arr[i];
+        // 处理断言函数
+        if (typeof current === 'function') {
+            try {
+                if (!current()) {
+                    clog("断言函数返回false，终止流程");
+                    return false;
+                }
+            } catch (e) {
+                clog(`断言函数执行错误: ${e}`);
+                return false;
+            }
+            continue;
+        }
+        
         // 参数解析（兼容ES5）
         var p, d, iv;
         if (typeof arr[i] === 'string') {
@@ -1686,12 +2332,129 @@ function follow(arr, prefix, fn) {
             landScapeCentralClick(d);
         } else {
             clog("操作" + p);
+            
             var finalPath = prefix ? prefix + p : p; // 根据getPath参数决定是否转换路径
             if (!findSinglePicFromPathTo(fn, finalPath, d)) {
-                break; // 跳出循环
+                sleep(d)
+                return false
             }
+            sleep(d)
         }
     }
+    return true
+}
+/**
+ * 遍历输入的图片序列进行操作，如果没有找到就停止
+ * @param {*} arr  
+ */
+function tfollow(arr) {
+    for (let i = 0; i < arr.length; i++) {
+        // 参数解析（兼容ES5）
+        var p, d, iv;
+        if (typeof arr[i] === 'string') {
+            clog("type1");
+            p = arr[i];
+            d = 500;
+        } else if (Array.isArray(arr[i])) {
+            clog("type2");
+            p = arr[i][0];
+            d = arr[i][1] || 500;
+            iv = arr[i][2];
+        } else {
+            clog("type3");
+            p = arr[i].p || arr[i].path;
+            d = arr[i].d || arr[i].delay || 500;
+            iv = arr[i].i || arr[i].interval;
+        }
+
+        // 前置等待
+        if (iv) sleep(iv);
+
+        // 执行操作
+        if (p === "c") {
+            screenCentralClick(d);
+            clog("无颜色操作阵列不支持点击屏幕中央");
+        } else if (p === "lc") {
+            clog("无颜色操作阵列不支持点击landscap屏幕中央");
+            landScapeCentralClick(d);
+        } else {
+            // let comp = text(p).findOne(1000)
+            
+            let escapedP = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 转义特殊字符
+            let regex = new RegExp(`.*${escapedP}$`); // 动态构建正则表达式
+            let comp = textMatches(regex).findOne(1000);
+            // let comp = text(p).findOne(1000)
+            if (comp) {
+                // comp.click()
+                click(Math.abs(comp.bounds().centerX()) ,
+                Math.abs(comp.bounds().centerY())
+                )
+                sleep(d)
+            } else {
+                clog("text not foud " + p)
+                sleep(d)
+                return false
+            } 
+        }
+    }
+    return true
+}
+/**
+ * 遍历输入的图片序列进行操作，如果没有找到就停止
+ * @param {*} arr 
+ * @param {*} prefix 
+ * @param {*} fn fn(match.point.x, match.point.y, tar.width, tar.height) x,y是左上角
+ */
+function idfollow(arr) {
+    for (let i = 0; i < arr.length; i++) {
+        // 参数解析（兼容ES5）
+        var p, d, iv;
+        if (typeof arr[i] === 'string') {
+            clog("type1");
+            p = arr[i];
+            d = 500;
+        } else if (Array.isArray(arr[i])) {
+            clog("type2");
+            p = arr[i][0];
+            d = arr[i][1] || 500;
+            iv = arr[i][2];
+        } else {
+            clog("type3");
+            p = arr[i].p || arr[i].path;
+            d = arr[i].d || arr[i].delay || 500;
+            iv = arr[i].i || arr[i].interval;
+        }
+
+        // 前置等待
+        if (iv) sleep(iv);
+
+        // 执行操作
+        if (p === "c") {
+            screenCentralClick(d);
+            clog("无颜色操作阵列不支持点击屏幕中央");
+        } else if (p === "lc") {
+            clog("无颜色操作阵列不支持点击landscap屏幕中央");
+            landScapeCentralClick(d);
+        } else {
+            
+            let escapedP = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 转义特殊字符
+            let regex = new RegExp(`.*${escapedP}$`); // 动态构建正则表达式
+            let comp = idMatches(regex).findOne(1000);
+            // let comp = id(p).findOne(1000)
+            if (comp) {
+                // comp.click()
+                click(Math.abs(comp.bounds().centerX()) ,
+                  Math.abs(comp.bounds().centerY())
+                )
+                sleep(d)
+            } else {
+                clog("id not foud " + p)
+                sleep(d)
+                return false
+             } 
+        }
+    }
+    return true
 }
 /* 使用示例 */
 // s([
@@ -1700,6 +2463,467 @@ function follow(arr, prefix, fn) {
 //     ["reveal.png", , 1e3], // 空位占位符（默认超时+1秒间隔）
 //     {p: "exe_1.png", i:500} // 对象简写
 // ]);
+
+function createAdDetector(whiteListPath) {
+    // 私有变量
+    let regex = null;
+
+    // 初始化逻辑
+    (function init() {
+        try {
+            clog("soso")
+            clog(whiteListPath)
+            const whiteList = JSON.parse(files.read(whiteListPath));
+            clog(whiteListPath)
+            // 合并所有匹配模式
+            // const patterns = [
+            //     ...whiteList.globalPatterns,
+            //     ...collectPackageSpecific(whiteList.packageSpecific)
+            // ].map(escapeRegExp);
+
+            //上述不支持
+            const patterns = whiteList.globalPatterns.concat(collectPackageSpecific(whiteList.packageSpecific)).map(escapeRegExp);
+
+
+
+            // 构建正则表达式
+            regex = new RegExp(
+                // `(^|.*:id/)(${patterns.join('|')})$`, 
+                // 'i'
+
+                `(?:^|.*:id\/)(${patterns.join('|')})$`
+            );
+        } catch(e) {
+            console.error("广告检测器初始化失败:", e);
+            regex = /$^/; // 生成不可能匹配的正则
+        }
+    })();
+
+    // 公共方法
+    return {
+        isAdNow: function() {
+            var comp=idMatches(regex).findOne(500)
+            clog(regex)
+            if(comp){
+                clog(comp)
+            }else{
+                clog("not found")
+            }
+            return !!idMatches(regex).findOne(500);
+        }
+    };
+
+    // 私有工具函数
+    function collectPackageSpecific(packageMap) {
+        //版本不支持
+        // return Object.values(packageMap).flat();
+        
+        return Object.values(packageMap || {}).reduce((acc, arr) => acc.concat(arr || []), []);
+    }
+
+    function escapeRegExp(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+}
+
+function ddclickCenter(centerX,centerY,w,h){
+    click(centerX,centerY)
+    sleep(100) 
+}
+/**
+ * 增强版统一操作函数
+ * @param {Array} arr 支持多种类型：
+ *    1. 断言函数：() => boolean，返回false时终止流程
+ *    2. 带类型标识：["t","text",delay] 或 ["i","id",delay]或者["c",cahcedButtom,delay]
+ *    3. 特殊操作：["c"], ["lc"]
+ *    4. 第五个参数 fn(centerX,centerY,w,h)
+ */
+function afollow(arr) {
+    var current
+    var regex
+    for (let i = 0; i < arr.length; i++) {
+        current = arr[i];
+        // 处理断言函数
+        if (typeof current === 'function') {
+            try {
+                if (!current()) {
+                    clog("断言函数返回false，终止流程");
+                    return false;
+                }
+            } catch (e) {
+                clog(`断言函数执行错误: ${e}`);
+                return false;
+            }
+            continue;
+        }
+
+        // 处理普通操作项
+        let type = "i", p, d = 500, iv;
+        
+        // 解析参数
+        if (Array.isArray(current)) {
+            clog("type 1")
+            type = current[0].toLowerCase();
+            p = current[1];
+            d = current[2] || 500;
+            iv = current[3];
+            fn = current[4];
+        } else if (typeof current === 'string') {
+            clog("type 2")
+            p = current;
+            type = p.startsWith("com.") ? "i" : "t";
+        } else {
+            clog("type 3")
+            p = current.p || current.path;
+            d = current.d || current.delay || 500;
+            iv = current.i || current.interval;
+            type = current.type || (p.startsWith("com.") ? "i" : "t");
+        }
+
+        // 前置等待
+        if (iv) sleep(iv);
+
+        // 处理特殊点击
+        if (p === "c") {
+            screenCentralClick(d);
+            continue;
+        } else if (p === "lc") {
+            landScapeCentralClick(d);
+            continue;
+        }
+
+        if(type==="c"){
+            if(!fn){
+                if(p.existApply(ddclickCenter)){
+                    sleep(d)
+                    continue
+                }else{
+                    sleep(d)
+                    return false
+                }
+
+            }else{
+                if(p.existApply(fn)){
+                    sleep(d)
+                    continue
+                }else{
+                    sleep(d)
+                    return false
+                }
+
+            }
+        }
+        // 执行匹配逻辑
+        let comp;
+        regex = new RegExp(`.*${escapeRegExp(p)}$`);
+
+
+
+        
+        try {
+            if(type==="t"){
+                comp=textMatches(regex).findOne(1000);
+            }else if(type==="i"){
+                comp=idMatches(regex).findOne(1000);
+            }else if(type==="d"){
+                comp=descMatches(regex).findOne(1000);
+            }else if(type==="class"){
+                comp=classNameMatches(regex).findOne(1000);
+            }else{
+                clog("暂不支持 "+type+" 视作d")
+                comp=descMatches(regex).findOne(1000);
+            } 
+            
+        } catch (e) {
+            clog(`匹配错误: ${e}`);
+        }
+
+        if (comp) {
+            clog(comp)
+            if(fn){
+                fn(Math.abs(comp.bounds().centerX()) ,Math.abs(comp.bounds().centerY()),comp.bounds().width(),comp.bounds().height())
+            }else{
+                click(Math.abs(comp.bounds().centerX()) ,Math.abs(comp.bounds().centerY()))
+            }
+            sleep(d);
+        } else {
+            clog(`[${type.toUpperCase()}] 未找到: ${p}`);
+            sleep(d);
+            return false;
+        }
+    }
+    return true;
+}
+
+// 正则表达式转义辅助函数
+function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+/**
+ * 
+ * @param {*} size size[0] w  size[1] h
+ * @param {*} pos pos[0] x pos[1] y
+ * @returns 
+ */
+function locateWithSizeAndPos(size,pos,delata){ 
+    w=device.width
+    h=device.height 
+    if(!delata){
+        delata=10
+    }
+    var start=pos[0]*w-(size[0]*w)/2 -delata
+    var top=pos[1]*h-(size[1]*h)/2 -delata
+    var bt=pos[1]*h+(size[1]*h)/2 +delata
+    var end=pos[0]*w+(size[0]*w)/2 +delata
+    start=start>=0? start:0
+    end=end>=w? w:end
+    top=top>=0? top:0
+    bt=bt>=h? h:bt 
+    
+    return boundsInside(start,top,end,bt)
+}
+/**
+ * 
+ * @param {*} size size[0] w  size[1] h
+ * @param {*} pos pos[0] x pos[1] y
+ * @returns 
+ */
+function locateWithSizeAndPosEqual(size,pos,delata){ 
+    w=device.width
+    h=device.height 
+    if(!delata){
+        delata=0
+    }
+    var start=pos[0]*w-(size[0]*w)/2 -delata
+    var top=pos[1]*h-(size[1]*h)/2 -delata
+    var bt=pos[1]*h+(size[1]*h)/2 +delata
+    var end=pos[0]*w+(size[0]*w)/2 +delata
+    start=start>=0? start:0
+    end=end>=w? w:end
+    top=top>=0? top:0
+    bt=bt>=h? h:bt 
+    
+    return bounds(start,top,end,bt)
+}
+/**
+ * 
+ * @param {*} size size[0] w  size[1] h
+ * @param {*} pos pos[0] x pos[1] y
+ * @returns 
+ */
+function locatSP(detail,delata){ 
+    let size=detail.size
+    let pos=detail.pos
+    if(!delata) delata=10
+    return locateWithSizeAndPos(size,pos,delata)
+}
+/**
+ * 
+ * @param {*} size size[0] w  size[1] h
+ * @param {*} pos pos[0] x pos[1] y
+ * @returns 
+ */
+function locatSPE(detail,delata){ 
+    let size=detail.size
+    let pos=detail.pos
+    if(!delata) delata=0
+    return locateWithSizeAndPosEqual(size,pos,delata)
+}
+/**
+ * 
+ * @param {*} selector 
+ * @param {*} fn  centerX,centerY,comp
+ * @returns 
+ */
+function canCanNeed(selector,fn){
+    // clog(selector)
+    const comp = selector.findOne(1000);
+    if (comp) {
+        // clog(comp)
+        if(fn){
+            clog("执行")
+             fn((comp.bounds().left+comp.bounds().right)/2,(comp.bounds().top+comp.bounds().bottom)/2,comp)
+        }else{
+            clog("点击")
+            comp.click();
+        }
+        return true
+    } 
+    console.log("组件不可用");
+    return false;
+}
+/**
+ * 
+ * @param {*} selector 
+ * @param {*} fn  centerX,centerY,comp
+ * @returns 
+ */
+function canCanNeedOne(selector,fn){
+    // clog(selector)
+    // 获取所有目标组件
+    let components = selector.find();
+    clog("找到"+components.length )
+    // 处理空结果
+    if (components.length === 0) {
+        toast("没有找到任何组件");
+        return false;
+    }
+
+    // 核心查找逻辑
+    let maxArea = 0;
+    let maxComponent = null;
+
+    components.forEach(comp => {
+        try {
+            const bounds = comp.bounds();
+            const width = bounds.right - bounds.left;
+            const height = bounds.bottom - bounds.top;
+            const area = width * height;
+            
+            // 比较并更新最大值
+            if (area > maxArea) {
+                maxArea = area;
+                maxComponent = comp;
+            }
+        } catch (e) {
+            console.error("组件异常:", e);
+        }
+    });
+ 
+    if (maxComponent) {
+        clog(maxComponent)
+        if(fn){
+            clog("执行")
+             fn((maxComponent.bounds().left+maxComponent.bounds().right)/2,(maxComponent.bounds().top+maxComponent.bounds().bottom)/2,maxComponent)
+        }else{
+            clog("点击")
+            maxComponent.click();
+        }
+        return true
+    } 
+    console.log("组件不可用");
+    return false;
+}
+
+
+//如果保证一张图只有一个环，环的颜色唯一
+//显然将一张图篇分别旋转四次，
+//每次找色获得的坐标进行变换，就可以得到环的top,left,right,end
+//就可以便捷地计算圆心
+
+//数学计算
+// 计算两点之间的距离
+function calculateDistance(x1, y1, x2, y2) {
+    return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+}
+
+// 计算点集的质心
+function calculateCentroid(points) {
+    var sumX = 0;
+    var sumY = 0;
+    var n = points.length;
+
+    for (var i = 0; i < n; i++) {
+        sumX += points[i].x;
+        sumY += points[i].y;
+    }
+
+    return { x: sumX / n, y: sumY / n };
+}
+
+// 最小二乘法拟合圆，返回圆心和半径
+function fitCircle(points) {
+    var centroid = calculateCentroid(points);  // 初步使用质心作为圆心
+    var sumRadius = 0;
+
+    // 计算平均半径
+    for (var i = 0; i < points.length; i++) {
+        sumRadius += calculateDistance(points[i].x, points[i].y, centroid.x, centroid.y);
+    }
+    
+    var radius = sumRadius / points.length; // 半径为平均半径
+
+    return { center: centroid, radius: radius };
+}
+
+// 剔除离圆心过远的点
+function filterOutliers(points, center, maxDistance) {
+    var filteredPoints = [];
+    for (var i = 0; i < points.length; i++) {
+        var distance = calculateDistance(points[i].x, points[i].y, center.x, center.y);
+        if (distance <= maxDistance) {
+            filteredPoints.push(points[i]);
+        }
+    }
+    return filteredPoints;
+} 
+
+// 颜色点聚类：基于距离
+function distance(p1, p2) {
+    return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+}
+
+function clusterPoints(points, distanceThreshold) {
+    let clusters = [];
+
+    for (let point of points) {
+        let added = false;
+        for (let cluster of clusters) {
+            for (let p of cluster) {
+                if (distance(p, point) < distanceThreshold) {
+                    cluster.push(point);
+                    added = true;
+                    break;
+                }
+            }
+            if (added) break;
+        }
+        if (!added) {
+            clusters.push([point]);
+        }
+    }
+
+    return clusters;
+}
+
+// 从一组点拟合圆
+function findCircleCenterFromPoints(points) {
+    if (!points || points.length === 0) return null;
+
+    let top = points[0], bottom = points[0], left = points[0], right = points[0];
+
+    for (let p of points) {
+        if (p.y < top.y) top = p;
+        if (p.y > bottom.y) bottom = p;
+        if (p.x < left.x) left = p;
+        if (p.x > right.x) right = p;
+    }
+
+    let centerX = (left.x + right.x) / 2;
+    let centerY = (top.y + bottom.y) / 2;
+    let radius = ((right.x - left.x) + (bottom.y - top.y)) / 4;
+
+    return {
+        center: { x: centerX, y: centerY },
+        radius: radius,
+        pointCount: points.length
+    };
+}
+
+// 综合识别多个圆
+function findAllCirclesFromPoints(points, distanceThreshold) {
+    let clusters = clusterPoints(points, distanceThreshold);
+    let results = [];
+
+    for (let cluster of clusters) {
+        if (cluster.length < 10) continue; // 噪声点过滤
+        let circle = findCircleCenterFromPoints(cluster);
+        if (circle) results.push(circle);
+    }
+
+    return results;
+}
+
 
 
 module.exports = {
@@ -1749,6 +2973,24 @@ module.exports = {
     ids, //id操作阵列阵列
     ts, //id操作阵列阵列
     follow, //图片查找操作的可中断流
+    tfollow, //text查找操作的可中断流
+    idfollow, //id查找操作的可中断流
+    afollow, //同意查找操作的可中断流，后续可能加上pic,但是显然这样会非常奇怪
     drawCircleGen, //画圈工具
-    create2PointGenerator
+    createCircleDrawer, //自定义画圈器，锚点可能为负值造成报错，注意centerX,Y
+    createAdDetector, //广告检测器
+    locateWithSizeAndPos, //定位器
+    locatSP, //使用属性的定位器
+    locatSPE, //使用属性的定位器
+    canCanNeed, //安全调用
+    canCanNeedOne, //安全调用
+    CachedBT, //缓存类
+    autoCachedBT, //自动保存DPI
+    getCachedInfo, //获取缓存信息
+    enableDPICache, //使能缓存
+    setColorFulSearch, //使用彩色搜图
+    findAllCirclesFromPoints,//找多个圆
+    create2PointGenerator,
+    safeCaptureClone
 };
+ 

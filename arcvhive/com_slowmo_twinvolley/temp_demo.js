@@ -6,17 +6,11 @@ let Thread = threads.start(function () {
             Allow.click();
         }
     }
-});
-//mode
-// 1.直连模拟器调试模式
-// 2.打包进入apk,auto.js点击执行模式,相对路径
-// 3.打包进入apk,auto.js点击执行模式,绝对路径，assests文件夹
-// 4.打包进入apk,auto.js点击执行模式,相对路径，sample文件夹
-// 5.直连模拟器调试模式,绝对路径，Pictures文件夹
-// 6.直连模拟器调试模式,绝对路径，Pictures文件夹  v6
+}); 
 var mode=1;
 let proj="com_slowmo_twinvolley"
-// let proj="com.slowmo.twinvolley.autojs"
+let projP="com.slowmo.twinvolley.autojs"
+let projR="com.slowmo.twinvolley"
 function getPath(p){
     switch(mode){
         case 5:
@@ -39,6 +33,9 @@ function getPath(p){
             return "/mnt/shared/Pictures/Screenshots/"+p
     }
 }
+function backForGoogleProtect(x,y,w,h){
+    back()
+}
 function getPathWithNum(p,num){
     if(!num){
         return getPath(p)
@@ -52,24 +49,41 @@ function getRandomInt(min, max) {
 function clog(msg){
     console.log(msg)
 }
-// // //临时脚本配置 雷电
-// // var Utils=require(getPathWithNum("utils",6))
+function dclickCenter(x,y,w,h){
+    click(x+(w/2),y+(h/2))
+    sleep(100) 
+}
+function ddclickCenter(centerX,centerY,w,h){
+    click(centerX,centerY)
+    sleep(100) 
+}
+ 
+function no_action(x,y,w,h){
+ 
+}
+function agree(x,y,w,h){
+    click(TAP.x*1.9,y+20)
+}
+
+function right2Left(){ 
+    // swipe(TAP.x,TAP.y,TAP.x,TAP.y-400,200) 
+    gesture(1000,[TAP.x*1.5,TAP.y],[0,TAP.y])  
+    sleep(500)
+    return true
+    // press(TAP.x*0.75,TAP.y*1.5,1000)  
+}
+
+// // //临时脚本配置 雷电 
 // var zutils=require(getPathWithNum("customUtils",5))
-// // var zutils=require("./customUtils") 引索
-// // var utils = new Utils()
+// // var zutils=require("./customUtils") 引索 
 // mode=1
 
-// // //临时脚本配置 蓝叠
-// // var Utils=require(getPathWithNum("utils",6))
-// var zutils=require(getPathWithNum("customUtils",7))
-// // var zutils=require("./customUtils") 
-// // var utils = new Utils()
+// // //临时脚本配置 蓝叠 
+// var zutils=require(getPathWithNum("customUtils",7)) 
 // mode=8
 
-// 打包脚本配置
-var Utils=require(getPathWithNum("utils",3))
-var zutils=require(getPathWithNum("customUtils",3))
-var utils = new Utils()
+// 打包脚本配置 
+var zutils=require(getPathWithNum("customUtils",3)) 
 mode=2
 
 function endJs() {
@@ -79,92 +93,274 @@ function endJs() {
 function startJs() {
     files.createWithDirs("/sdcard/mock/autojsstart");
 }
+
 let pg_1="com.android.permissioncontroller:id/permission_allow_button"
 let pg_2="com.android.packageinstaller:id/permission_allow_button"
+let c_1="XXX自定义"
+//竖版
+let TAP={x:device.width/2,y: device.height/ 2,
+    cl:function(){
+        click(this.x,this.y)
+    },
+    clp:function(a,b){
+        click(this.x*a,this.y*b)
+    },
+}
+//横板
+// let TAP={y:device.width/2,x: device.height/ 2,
+//     cl:function(){
+//         click(this.x,this.y)
+//     },
+//     clp:function(a,b){
+//         click(this.x*a,this.y*b)
+//     },}
+// let bt_1=new zutils.CachedBT(
+//     "cut_1_1.png",getPath("")
+// ) 
 
-var TAP
-function sclick(n,i){
-    if(!i){
-        i=200
-    }
-    zutils.repeatFunction(()=>{
-        zutils.screenCentralClick(i,false)
-    },n)
-}
+let test=new zutils.CachedBT(
+    "cut_1_1.png",getPath(""),"buttom 1"
+) 
 
-function shift(){
-    if(TAP){
-        swipe(TAP.x,TAP.y,TAP.x,TAP.y-300,100)
-    }else{
-        clog("TAP 没有初始化")
-    }
-}
-function getTap(x,y,w,h){
-    if(!TAP){
-        clog(x+" "+y+" "+h+" "+w+"")
-        TAP={x:x+(w/2),y:y+(h/2)}
-    }
-}
 var isGuid=true
+function grant(){
+    // zutils.ids([
+    //     [pg_1,100],
+    //     [pg_2,50], 
+    // ])
+}
 function guid(){
-    zutils.ids([
-        [pg_1,100],
-        [pg_2,100],
-    ])
-    if(zutils.clickTargetPicCentralFromPath(getPath("s_0.png"))){
-        while(!zutils.findSinglePicFromPathTo(getTap,getPath("s_1.png"),50)){
-            sclick(50,100)
+    grant()
+    // isGuid=false
+    // gemB=true
+    if(zutils.afollow([
+        ["t","This device isn’t Play Protect certified",0,0,backForGoogleProtect]       
+    ])){
+        clog("we have ads")
+        adtime=true
+    }
+    if(zutils.afollow([
+        ["t","Sign in to find the latest Android apps, games, movies, music, & more",0,0,backForGoogleProtect]
+    ])){
+        clog("we have ads")
+        adtime=true
+    }
+    while(tests[5].existApply(ddclickCenter)){
+        sleep(500)
+    }
+    if(tests[6].existApply(ddclickCenter)){
+        while(!tests[7].existApply(ddclickCenter)){
+            pushBall() 
+            pushBall() 
+        } 
+    }
+
+    if(tests[8].existApply(no_action)){
+        while(!tests[9].existApply(ddclickCenter)){
+            pushBall() 
+            pushBall() 
+        }
+        isGuid=false
+    }
+    if(!isGuid){
+        if(tests[3].existApply(upper)){
+            sleep(1000)
+        }
+        while(tests[1].existApply(upper)){
+            sleep(1000)
+        }
+        if(tests[2].existApply(belloww)){
+            sleep(1000)
+        }
+        if(tests[4].existApply(ddclickCenter)){
+            sleep(1000)
+            click(437,1824)
+            gemB=true
         }
 
-        
-        while(!zutils.clickTargetPicCentralFromPath(getPath("s_2.png"),50)){
-            zutils.repeatFunction(()=>{
-                sclick(5,0)
-                shift()
-            },50)
+    }
+    if(adtime){
+        if(tests[9].existApply(ddclickCenter)){
+            adtime=false 
         }
+        if(tests[13].existApply(ddclickCenter)){
+            clog("don't know")
+        }
+    }
+    // zutils.afollow([
+    //     ["t","This device isn’t Play Protect certified",0,0,backForGoogleProtect]
+    // ])
+    // zutils.afollow([
+    //     ["t","Sign in to find the latest Android apps, games, movies, music, & more",0,0,backForGoogleProtect]
+    // ])
+}
+function upper(x,y,w,h){
+    click(x-100,y-100)
+}
+function belloww(x,y,w,h){
+    click(x,y+100)
+}
+function shift(){ 
+    // swipe(TAP.x,TAP.y,TAP.x,TAP.y-400,200) 
+    gesture(1000,[TAP.x,TAP.y],[TAP.x,TAP.y-500])  
+    // press(TAP.x*0.75,TAP.y*1.5,1000)  
+}
+let adtime=false
+function pushBall(){  
+    // let nc=getRandomInt(0,3)
+    // let sc=getRandomInt(0,3)
 
-        
-        while(!zutils.clickTargetPicCentralFromPath(getPath("c_1.png"),50)){
+    // for(let i=0;i<nc;i++){
+    //     sleep(getRandomInt(500,600)) 
+    //     TAP.cl() 
+    // }
+    // for(let i=0;i<sc;i++){
+    //     sleep(getRandomInt(0,400)) 
+    //     gesture(getRandomInt(300,500),[TAP.x,TAP.y+200],[getRandomInt(150,950),TAP.y-200])  
+    // } 
+    if(!gemB){
+        loopPlay() 
+    }else{
+        zutils.repeatFunction(()=>{
+            let land
+            if(getRandomInt(0,1)==0){
+                land=getRandomInt(150,300)
+            }else{
+                land=getRandomInt(850,950)
+            }
             zutils.repeatFunction(()=>{
-                sclick(5,0)
-                shift()
-            },50)
+                zutils.screenCentralClick(100,false)
+            },3)
+            gesture(getRandomInt(100,200),[TAP.x,1410],[land,TAP.y-200])   
+            sleep(getRandomInt(0,1000))
+        },5)
+        if(zutils.afollow([
+            ["t","This device isn’t Play Protect certified",0,0,backForGoogleProtect]       
+        ])){
+            clog("we have ads")
+            adtime=true
         }
-        
+        if(zutils.afollow([
+            ["t","Sign in to find the latest Android apps, games, movies, music, & more",0,0,backForGoogleProtect]
+        ])){
+            clog("we have ads")
+            adtime=true
+        }
     }
 }
+// 检查当前页面结构是否满足游戏界面
+// function checkADTime(){
+//     sleep(500)
+//     let comp = idMatches(/.*content$/).findOne(1000);
+//     clog("检查是否为广告"+comp.childCount())
+
+//     if(comp){
+//         var count1=0
+//         var count2=0
+//         var count3=0
+//         for(var i=0;i<comp.childCount();i++){
+//             // clog(comp.child(i)) 
+//             // clog(comp.child(i).id())
+//             clog(comp.child(i).className())  
+//             let cn=comp.child(i).className()
+//             if(cn=="android.widget.RelativeLayout"){
+//                 count1++
+//             }else if(cn=="android.widget.FrameLayout"){
+//                 count2++
+//             } 
+//             clog("###############################")
+//         }
+//         return count1===1&&count2===2
+//     }
+//     return false
+// }
 
 // 定义三个无副作用的逻辑函数
 function logic1() { 
-    //Play
-    //wait 1s
-    // TAP={x:540,y:1500}
-    if(zutils.clickTargetPicCentralFromPath(getPath("s_3.png"),1500)){
-        zutils.clickTargetPicCentralFromPath(getPath("s_4.png"),50)
-        while(!zutils.clickTargetPicCentralFromPath(getPath("c_1.png"),50)){
-            zutils.repeatFunction(()=>{
-                sclick(3,100)
-                shift()
-            },20)
-            var comp= text("NOT NOW").findOne(500)
-            if (comp) {
-                comp.click()
-            }  
-        }
-        sleep(500)
-        zutils.screenCentralClick(100,false)
-        zutils.screenCentralClick(100,false)
+    let nc=getRandomInt(0,4)
+    let sc=getRandomInt(0,2)
+
+    for(let i=0;i<nc;i++){
+        clog("逻辑1 c")
+        sleep(getRandomInt(600,800)) 
+        TAP.cl() 
     }
+    for(let i=0;i<sc;i++){
+        clog("逻辑1 s")
+        sleep(getRandomInt(400,600)) 
+        gesture(getRandomInt(400,600),[TAP.x,1410],[getRandomInt(150,300),TAP.y-200])   
+    } 
+
 }
 
 function logic2() { 
+    let nc=getRandomInt(0,4) 
+
+    for(let i=0;i<nc;i++){
+        clog("逻辑2 sc")
+        sleep(getRandomInt(500,600)) 
+        TAP.cl() 
+        sleep(getRandomInt(400,600)) 
+        gesture(getRandomInt(300,500),[TAP.x,1410],[getRandomInt(800,950),TAP.y-200])  
+    } 
 
 }
 
 function logic3() { 
+    let nc=getRandomInt(0,4)
+    let sc=getRandomInt(0,2)
+    for(let i=0;i<sc;i++){
+        clog("逻辑3 s")
+        sleep(getRandomInt(400,600)) 
+        gesture(getRandomInt(500,800),[TAP.x,1410],[getRandomInt(150,300),TAP.y-200])  
+        sleep(getRandomInt(0,400)) 
+    } 
+
+    for(let i=0;i<nc;i++){
+        clog("逻辑3 c")
+        sleep(getRandomInt(500,600)) 
+        TAP.cl() 
+    }
     
 }
+let gemB=false
+//对于游戏我们只需要找到一个死循环即可
+function singleLoop(){
+    let isInn=false
+    if(tests[10].existApply(ddclickCenter)){
+        while(!tests[9].existApply(ddclickCenter)){ 
+            if(!isInn){
+                if(tests[11].existApply(ddclickCenter)){
+                    isInn=true
+                } 
+            }
+            pushBall() 
+            if(adtime){
+                break
+            }
+            pushBall() 
+            if(adtime){
+                break
+            }
+            pushBall() 
+            if(adtime){
+                break
+            }
+        }
+    }
+    tests[12].existApply(xxxx)
+}
+function xxxx(x,y,w,h){
+    click(540,1650)
+}
+
+let der=zutils.createCircleDrawer(TAP.x,TAP.y,200,800) 
+let c2p=zutils.create2PointGenerator(TAP.x*2,TAP.y,200,0,TAP.y*0.7)
+function adapt(){ 
+ 
+    zutils.autoCachedBT(true)
+}
+
 const logics = [logic1, logic2, logic3]
 const randomLogic = () => {
     return logics[Math.floor(Math.random() * logics.length)]
@@ -174,45 +370,383 @@ function loopPlay(){
         randomLogic()()
     } 
 }
+//后台线程可以做些事情
+var backGroundWork = threads.start(function() {
+    sleep(1500)
+    while (true) {
+        if (auto.service != null) {
+            if(zutils.afollow([
+                    ["t","NOT NOW",0],  
+            ]) ){
+                break
+            }
+        } 
+        sleep(10 * 1000);
+    }
+});
+// 假设 zutils.CachedBT 构造函数已存在
+var tests = []; // 可变数组
+
+tests.push(
+    new zutils.CachedBT(
+        "nono.png", // 对齐
+        getPath(""),      // 路径（假设 getPath 已定义）
+        "no button " // 标签：button 1, button 2, ...
+    )
+);
+// 假设要创建 5 个 CachedBT 实例
+for (var i = 1; i < 35; i++) {
+    tests.push(
+        new zutils.CachedBT(
+            (i ) + ".png", // 文件名：1.png, 2.png, ..., 5.png
+            getPath(""),      // 路径（假设 getPath 已定义）
+            "button " + (i) // 标签：button 1, button 2, ...
+        )
+    );
+} 
 
 
-function singleTest(){ 
-    // zutils.clickFromPath([0, 1, 0, 0, 0, 0, 0, 1, 1])
-    // while(!zutils.findSinglePicFromPathTo(getTap,getPath("s_1.png"),50)){
-    //     sclick(50,3)
-    // }
-    
-    TAP={x:540,y:1500}
-    logic1()
-    // var comp= text("NOT NOW").findOne(500)
-    // if (comp) {
-    //     comp.click()
-    // }  
+function scrp(){
+    var dddd= c2p()
+    gesture(1000,[dddd[0].x,dddd[0].y],[dddd[1].x,dddd[1].y]) 
 }
+function sscrp(){
+    var i=0
+    var times=getRandomInt(10,30)
+    for(i;i<times;i++){
+        //判断可动
+        if(tests[1].existApply(no_action)||!tests[2].existApply(no_action)){  
+            break
+        }
+
+        var dddd= c2p()
+        if(i%2==1){
+            gesture(getRandomInt(700,800),[dddd[0].x,dddd[0].y],[dddd[1].x,dddd[1].y]) 
+        }else{
+            gesture(getRandomInt(700,800),[dddd[1].x,dddd[1].y],[dddd[0].x,dddd[0].y])
+        } 
+    }
+}
+
+function forkYou(){
+    gs([ [400, 1070]
+        , [530, 1070]
+        , [530, 1200]
+        , [680, 1200]
+    ],1000,500) 
+
+    while (!tests[2].existApply(ddclickCenter)) {
+        cclick([[910,94],[910,94],[910,94]],500) 
+    }
+    app.launch(projR) 
+    广告
+    afollow的用法
+    zutils.afollow([
+        ["t","Continue",0],  
+        ["i","com.mbit.callerid.dailer.spamcallblocker:id/btnContinue",0,1500],
+        ["i","com.mbit.callerid.dailer.spamcallblocker:id/btnAllowSync",0,1500],
+        ["t","Next",1000,1000],  
+    ])
+
+    zutils.afollow([
+        ["c",tests[34],0,0,ddclickCenter],
+        ["c",tests[21],0,8000,dabove],
+        ["c",tests[25],1000,2000,ddclickCenter],
+    ]) 
+    TAP.clp(0.1,0.2) //超市
+    TAP.clp(0.1,0.1) //设置
+    TAP.clp(0.1,0.4) //skin
+    TAP.clp(0.1,0.5) // noadd
+    TAP.clp(1.75,0.15) // close
+    TAP.clp(1.6,0.55) // close setting
+
+    sscrp() 
+    der.drawCircle(20)
+    follow的用法
+    zutils.follow([
+        // ["cut_1_1.png",500],
+        ()=>{
+            clog("hha")
+            return true;
+        },
+    ],getPath(""),dclickCenter)
+
+    if(!levelButtom.existApply(no_action,false)){
+        zutils.enableDPICache(false)
+    }
+    
+    找色ffe300 
+    while(true){ 
+        img = captureScreen()
+        images.saveImage(img, "/sdcard/1.jpg", "jpg");
+        source = images.read("/sdcard/1.jpg");
+        images.rotate(source, 180)
+        sleep(2000)
+        pointM = findMultiColors(source, "#ffe300", [
+            [10, 10, "#ffe300"],  // 主颜色点 (x=0,y=0) 的右侧 10px, 下方 10px 必须是绿色
+            [-10, 10, "#ffe300"],    // 主颜色点的右侧 20px, 下方 20px 必须是蓝色
+            [10, -10, "#ffe300"],    // 主颜色点的右侧 20px, 下方 20px 必须是蓝色
+            [-10, -10, "#ffe300"],    // 主颜色点的右侧 20px, 下方 20px 必须是蓝色
+        ],{region: [0, TAP.y*0.45, device.width, device.height-TAP.y*0.45],
+            threshold: 40
+        }); 
+        attack(pointM)
+        source.recycle()
+        if(!pointM&&noThanks.existApply(ddclickCenter)){
+            break
+        }
+    } 
+
+    if(mo.existApply(genZeroPointCol)){
+        drag(zeroP.getP(3,3),zeroP.getP(1,1))
+
+        while(!get30.existApply(ddclickCenter) ){
+    
+        }
+        sleep(2000)
+ 
+        while(!get30.existApply(ddclickCenter) ){ 
+            sleep(1000)
+            clog("第二关")
+            if(prePlaySign.existApply(no_action)){
+                drag(zeroP.getP(2,1),zeroP.getP(0,3))
+                sleep(500)
+                drag(zeroP.getP(1,2),zeroP.getP(3,4))
+            } 
+        }
+        sleep(10000)
+ 
+        while(!get30.existApply(ddclickCenter) ){  
+            
+            sleep(1000)
+            clog("第三关")
+            if(v8.existApply(no_action)){
+                drag(zeroP.getP(1,1),zeroP.getP(3,0))
+                sleep(500)
+                drag(zeroP.getP(2,1),zeroP.getP(0,3))
+                sleep(500)
+                drag(zeroP.getP(3,2),zeroP.getP(0,0)) 
+            }
+        } 
+        sleep(10000)
+
+        while(!get15.existApply(ddclickCenter) ){  
+
+            claim.existApply(ddclickCenter)
+            sleep(1500)
+            v8.existApply(sissor) 
+            sleep(1500)
+            gesture(2000,[TAP.x,TAP.y*0.8],[TAP.x,TAP.y*1.8])
+            sleep(1000) 
+            clog("第四关")
+            if(v8.existApply(no_action)){
+                drag(zeroP.getP(0,2),zeroP.getP(1,1))
+                sleep(500)
+                drag(zeroP.getP(0,1),zeroP.getP(2,2))
+                sleep(500) 
+            } 
+        }
+        sleep(1500)
+    }
+    
+
+    zutils.clickFromPath([0, 1, 0, 0, 0, 0, 0, 1, 1])
+    guid()
+    logic1()
+    logic2()
+    logic3() 
+}
+let zeroP=undefined
+function genZeroPointCol(x,y,w,h){
+    // // gesture(1000,[TAP.x,y],[TAP.x+100,y])
+    // click(TAP.x+100,y)
+    // sleep(100)
+    const boxWith=w/2
+    const boxHight=h/2
+    zeroP={
+        x:x-boxWith,
+        y:y+4*boxHight,
+        getP:function(px,py){
+            return {
+                x:zeroP.x+px*boxWith,
+                y:zeroP.y-py*boxHight,
+            }
+        }
+    }
+    clog(zeroP)
+    clog(boxWith)
+    clog(boxHight)
+}
+
+function mock(){ 
+    const boxWith=182
+    const boxHight=183
+    zeroP={
+        x:266,
+        y:1389,
+        getP:function(px,py){
+            return {
+                x:zeroP.x+px*boxWith,
+                y:zeroP.y-py*boxHight,
+            }
+        }
+    }
+}
+
+var pointM,img,source
+function singleTest(){ 
+    guid()
+    // logic1()
+    // logic2()
+    // logic3() 
+    // singleLoop()
+}
+
+function gs(arr,step,inter){
+    for (let i = 0; i < arr.length-1; i++) {
+        gesture(step,arr[i],arr[i+1])
+        sleep(inter)
+    }
+}
+function cclick(arr,inter){
+    for (let i = 0; i < arr.length; i++) {
+        click(arr[i][0],arr[i][1])
+        sleep(inter)
+    }
+}
+
+
+function getSE() {
+    // 1. 获取屏幕截图
+    let source =zutils.safeCaptureClone(); // ImageWrapper 类型
+    if (!source) {
+        toast("截图失败");
+        return;
+    }
+
+    // 2. 原图查色
+    let pointM = images.findMultiColors(source, "#ffe300", [
+        [10, 10, "#ffe300"],
+        [-10, 10, "#ffe300"],
+        [10, -10, "#ffe300"],
+        [-10, -10, "#ffe300"],
+    ], {
+        region: [0, 150, device.width, device.height -300],
+        // threshold: 100
+    });
+
+    if (!pointM) {
+        toast("原图找色失败");
+        safeRecycle(source)
+        return;
+    }
+
+    // 3. 翻转后处理
+    let bitmap = source.getBitmap();                      // ImageWrapper → Bitmap
+    let flippedBitmap = flipImageVertically(bitmap);     // 翻转 Bitmap
+    let flippedImage = ImageWrapper.ofBitmap(flippedBitmap); // Bitmap → ImageWrapper
+
+    images.saveImage(flippedImage, "/sdcard/2.jpg", "jpg");
+    // 4. 翻转图查色
+    let pointN = images.findMultiColors(flippedImage, "#ffe300", [
+        [10, 10, "#ffe300"],
+        [-10, 10, "#ffe300"],
+        [10, -10, "#ffe300"],
+        [-10, -10, "#ffe300"],
+    ], {
+        region: [0, 150, device.width, device.height -300],
+        // threshold: 40
+    });
+ 
+    safeRecycle(source)
+    safeRecycle(flippedImage) 
+
+    if (pointN) { 
+        let res = {
+            x1:pointM.x, 
+            y1:pointM.y ,
+            x2: TAP.x * 2 - pointN.x ,
+            y2: TAP.y * 2 - pointN.y
+        };
+        clog(res);
+        // fuzzGestrue(1500,res.x1,res.y1,res.x2,res.y2)
+        return res;
+    }
+
+    return undefined;
+}
+
+function fuzzGestrue(t,x1,y1,x2,y2){
+    if(x1){
+        gesture(t, [x1+getRandomInt(-20,20),y1+getRandomInt(-20,20)], [x2+getRandomInt(-20,20),y2+getRandomInt(-20,20)]);
+
+    }
+}
+function isRevealed(){
+    let source = zutils.safeCaptureClone(); // ImageWrapper 类型
+    if (!source) {
+        toast("截图失败");
+        return;
+    }
+
+    // 2. 原图查色
+    let pointM = images.findMultiColors(source, "#ffe300", [
+        [10, 10, "#ffe300"],
+        [-10, 10, "#ffe300"],
+        [10, -10, "#ffe300"],
+        [-10, -10, "#ffe300"],
+    ], {
+        region: [0, TAP.y * 0.45, device.width, device.height - TAP.y * 0.45],
+        // threshold: 40
+    });
+
+    safeRecycle(source) 
+    if (!pointM) { 
+        return false;
+    }else{
+        return true
+    }
+}
+
+
+
+
 if (!requestScreenCapture(false)) {
     toast("请求截图失败");
     exit();
 }
 function main(){
+    console.log("start")
     
+    adapt()
+    // zutils.setColorFulSearch(true)
     // singleTest()
     
+    // 记得打包要切换路径
+    // 记得很横板要切换截图模式
     // // warmup play
-    console.log("start")
-    app.launch("com.slowmo.twinvolley")
-    sleep(5000)
+    app.launch(projR)
+   // app.startActivity({ 
+   //     packageName: "com.slowmo.twinvolley",
+   //     className: "包名.LauncherActivity"
+   //   });
 
-    const endTimeMillis = Date.now() + getRandomInt(4 * 60 * 1000, 6 * 60 * 1000);
+    sleep(5000)
+    // const endTimeMillis = Date.now() + getRandomInt(4 * 60 * 1000, 6 * 60 * 1000);
     const intervalRange = { min: 1000, max: 3000 };
     // 循环执行，直到当前时间超过结束时间
-    while (Date.now() < endTimeMillis) { 
+    // while (Date.now() < endTimeMillis) { 
+    while (true) { 
         guid()
-        loopPlay()
+        // loopPlay()
+        singleLoop()
         const sleepTime = getRandomInt(intervalRange.min, intervalRange.max);
         sleep(sleepTime);
     } 
+    // console.log("edn")
 }
 runtime.getImages().initOpenCvIfNeeded();
 startJs()
 main()
+threads.shutDownAll();
 endJs()

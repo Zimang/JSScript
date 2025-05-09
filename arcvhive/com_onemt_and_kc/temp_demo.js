@@ -320,6 +320,7 @@ function forkYou(){
 
 var pointM,img,source
 function singleTest(){ 
+    TAP.cl()
 }
 
 if (!requestScreenCapture(false)) {
